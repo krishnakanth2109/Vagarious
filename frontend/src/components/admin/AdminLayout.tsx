@@ -9,7 +9,8 @@ import {
   Bell,
   Search,
   UserCheck,
-  Briefcase
+  Briefcase,
+  FileText
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -20,8 +21,6 @@ interface AdminLayoutProps {
 const AdminLayout = ({ children, title }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // 1. IMPORT FROM ENV
   const appName = import.meta.env.VITE_APP_NAME || "Admin Portal";
 
   useEffect(() => {
@@ -38,21 +37,21 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
     navigate("/login");
   };
 
+  // --- UPDATED MENU ITEMS ---
   const menuItems = [
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "Jobs", path: "/admin-jobs", icon: Briefcase },
-    { name: "Candidates", path: "/admin-candidates", icon: Users },
+    // This points to the new Admin Candidates page
+    { name: "Applications", path: "/admin-candidates", icon: FileText }, 
     { name: "Recruiters", path: "/recruiters", icon: UserCheck },
     { name: "Settings", path: "/settings", icon: Settings },
   ];
 
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans">
-      
       {/* SIDEBAR */}
       <aside className="w-72 bg-[#0f172a] text-white hidden md:flex flex-col shadow-2xl z-20 fixed h-full transition-all duration-300">
         <div className="p-8 pb-4">
-            {/* 2. USE ENV VARIABLE HERE */}
             <h1 className="text-xl font-extrabold tracking-tight text-white">
               {appName}
             </h1>
@@ -63,7 +62,6 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
-            
             return (
               <Link
                 key={item.name}
@@ -85,12 +83,8 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
         </nav>
 
         <div className="p-4 border-t border-slate-800 bg-[#0f172a]">
-            <button 
-                onClick={handleLogout}
-                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors"
-            >
-                <LogOut size={16} />
-                <span>Sign Out</span>
+            <button onClick={handleLogout} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors">
+                <LogOut size={16} /> <span>Sign Out</span>
             </button>
         </div>
       </aside>
@@ -102,11 +96,9 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
           <div className="flex items-center gap-4">
             <button className="p-2 relative text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
                 <Bell size={20} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
             </button>
           </div>
         </header>
-
         <main className="flex-1 p-8 overflow-y-auto bg-gray-50">
             <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {children}

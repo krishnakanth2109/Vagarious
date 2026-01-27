@@ -21,8 +21,8 @@ import StaffingModels from "./pages/StaffingModels";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
-import AdminCandidates from "./pages/AdminCandidates";
-import AdminJobs from "./pages/admin/AdminJobs"; // Import the new page
+import AdminJobs from "./pages/admin/AdminJobs";
+import AdminCandidates from "./pages/admin/AdminCandidates"; // <--- IMPORT NEW PAGE
 
 const queryClient = new QueryClient();
 
@@ -49,10 +49,10 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/admin-candidates" element={<AdminCandidates />} />
-          
-          {/* NEW ROUTE FOR JOB MANAGEMENT */}
           <Route path="/admin-jobs" element={<AdminJobs />} />
+          
+          {/* NEW ROUTE FOR CANDIDATES TABLE */}
+          <Route path="/admin-candidates" element={<AdminCandidates />} />
      
           {/* 404 Route */}
           <Route path="*" element={<NotFound />} />
