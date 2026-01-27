@@ -1,0 +1,420 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { 
+  ArrowRight, 
+  CheckCircle2, 
+  Building2, 
+  Users, 
+  Zap, 
+  Shield,
+  Clock,
+  Award,
+  Target,
+  Laptop,
+  HeartHandshake,
+  Factory,
+  ShoppingBag,
+  Headphones,
+  Send
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Layout } from "@/components/layout/Layout";
+import { HeroBanner } from "@/components/shared/HeroBanner";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { useToast } from "@/hooks/use-toast";
+import heroEmployers from "@/assets/hero-employers.jpg";
+
+const whyChoose = [
+  {
+    icon: Target,
+    title: "Industry Expertise",
+    description: "Strong understanding of both IT and Non-IT hiring landscapes enables accurate role-to-talent alignment.",
+  },
+  {
+    icon: Zap,
+    title: "Efficient Hiring Timelines",
+    description: "Optimized recruitment workflows support faster closures without compromising candidate quality.",
+  },
+  {
+    icon: Shield,
+    title: "Quality Assurance",
+    description: "Replacement support ensures hiring outcomes meet defined expectations.",
+  },
+  {
+    icon: Clock,
+    title: "Dedicated Client Support",
+    description: "A single, experienced point of contact manages the recruitment lifecycle end to end.",
+  },
+  {
+    icon: Award,
+    title: "Cost Transparency",
+    description: "Competitive and clearly defined pricing models with no hidden charges.",
+  },
+  {
+    icon: Users,
+    title: "Extensive Talent Network",
+    description: "Access to a large, pre-screened talent pool across multiple industries and locations in India.",
+  },
+];
+
+const engagementModels = [
+  {
+    title: "Contingency Hiring",
+    description: "Outcome-based recruitment with payment upon successful hire.",
+    features: ["No upfront fees", "Minimal risk", "Suitable for multiple open positions"],
+  },
+  {
+    title: "Retained Search",
+    description: "Dedicated search for senior leadership and critical roles.",
+    features: ["Exclusive engagement", "Comprehensive market mapping", "Executive-level expertise"],
+  },
+  {
+    title: "RPO Services",
+    description: "End-to-end recruitment process management for high-volume or ongoing hiring needs.",
+    features: ["Dedicated recruitment teams", "Full lifecycle ownership", "Scalable and cost-efficient"],
+  },
+];
+
+const industries = [
+  { icon: Laptop, name: "IT & Software", positions: "500+ positions filled" },
+  { icon: Building2, name: "BFSI", positions: "300+ positions filled" },
+  { icon: HeartHandshake, name: "Healthcare", positions: "200+ positions filled" },
+  { icon: Factory, name: "Manufacturing", positions: "250+ positions filled" },
+  { icon: ShoppingBag, name: "Retail & E-commerce", positions: "180+ positions filled" },
+  { icon: Headphones, name: "BPO & Services", positions: "400+ positions filled" },
+];
+
+const hiringProcess = [
+  { step: "1", title: "Requirement Intake", description: "Define role expectations, timelines, and hiring objectives." },
+  { step: "2", title: "Role Consultation", description: "Sourcing and screening through our established talent networks and databases." },
+  { step: "3", title: "Talent Identification", description: "We source and screen candidates from our extensive network" },
+  { step: "4", title: "Candidate Shortlisting", description: "Presentation of qualified profiles within defined timelines." },
+  { step: "5", title: "Interview Management", description: " End-to-end coordination, scheduling, and feedback management." },
+  { step: "6", title: "Offer & Onboarding Support", description: " Assistance with offer finalization, negotiations, and smooth onboarding." },
+];
+
+const Employers = () => {
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    companyName: "",
+    contactPerson: "",
+    email: "",
+    phone: "",
+    designation: "",
+    requirements: "",
+    positions: "",
+    location: "",
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Requirement Submitted!",
+      description: "Our recruitment team will contact you within 24 hours.",
+    });
+    setFormData({
+      companyName: "",
+      contactPerson: "",
+      email: "",
+      phone: "",
+      designation: "",
+      requirements: "",
+      positions: "",
+      location: "",
+    });
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  return (
+    <Layout>
+      <HeroBanner
+        image={heroEmployers}
+        subtitle="For Employers"
+        title="Build Your Dream Team With Us"
+        description="Partner with Vagarious Solutions for reliable, efficient, and cost-effective recruitment. We understand your business and deliver candidates who make a difference."
+      >
+        <Button variant="hero" size="lg" asChild>
+          <a href="#hiring-form">Submit Requirement</a>
+        </Button>
+        <Button variant="hero-outline" size="lg" asChild>
+          <Link to="/contact">Talk to Expert</Link>
+        </Button>
+      </HeroBanner>
+
+      {/* Why Choose Us */}
+      <section className="section-padding">
+        <div className="container-custom">
+          <SectionHeading
+            subtitle="Why Choose Vagarious"
+            title="A Trusted Partner in Talent Acquisition"
+            description="We combine deep market knowledge with a consultative approach to deliver consistent, high-quality hiring outcomes across IT and Non-IT domains."
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {whyChoose.map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="flex gap-4 p-6 glass-card-hover"
+              >
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <item.icon className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold font-heading mb-1">{item.title}</h3>
+                  <p className="text-muted-foreground text-sm">{item.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How We Work */}
+      <section className="section-padding bg-muted/50">
+        <div className="container-custom">
+          <SectionHeading
+            subtitle="How We Work"
+            title="Structured and Transparent Hiring Approach"
+            description="Our process is designed to simplify recruitment while maintaining control, visibility, and speed."
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {hiringProcess.map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="relative glass-card p-6"
+              >
+                <span className="absolute -top-4 left-6 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-sky-dark flex items-center justify-center text-primary-foreground font-bold">
+                  {item.step}
+                </span>
+                <h3 className="text-lg font-bold font-heading mb-2 mt-2">{item.title}</h3>
+                <p className="text-muted-foreground text-sm">{item.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Engagement Models */}
+      <section className="section-padding">
+        <div className="container-custom">
+          <SectionHeading
+            subtitle="Engagement Models"
+            title="Flexible Hiring Partnerships"
+            description="Choose an engagement model aligned with your hiring volume, role criticality, and budget."
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {engagementModels.map((model, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="glass-card-hover p-6 text-center"
+              >
+                <h3 className="text-xl font-bold font-heading mb-2">{model.title}</h3>
+                <p className="text-muted-foreground mb-4">{model.description}</p>
+                <ul className="space-y-2">
+                  {model.features.map((feature, i) => (
+                    <li key={i} className="flex items-center justify-center gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Industries */}
+      <section className="section-padding bg-secondary text-secondary-foreground">
+        <div className="container-custom">
+          <SectionHeading
+            subtitle="Industries We Serve"
+            title="Expertise Across Sectors"
+            description="Our recruiters have deep domain knowledge across multiple industries."
+            light
+          />
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {industries.map((industry, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-secondary-foreground/5 rounded-2xl p-4 text-center border border-secondary-foreground/10 hover:border-primary/50 transition-colors"
+              >
+                <div className="w-12 h-12 rounded-xl bg-primary/10 mx-auto mb-3 flex items-center justify-center">
+                  <industry.icon className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-semibold text-sm mb-1">{industry.name}</h3>
+                <p className="text-xs text-secondary-foreground/60">{industry.positions}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Hiring Form */}
+      <section id="hiring-form" className="section-padding scroll-mt-24">
+        <div className="container-custom">
+          <div className="grid lg:grid-cols-2 gap-12">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <p className="text-sm font-semibold uppercase tracking-wider text-primary mb-3">
+                Get Started
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold font-heading mb-6">
+                Submit Your Hiring Requirement
+              </h2>
+              <p className="text-muted-foreground mb-8">
+                Fill in the form and our recruitment specialist will get back to you within 24 hours 
+                to discuss your requirements in detail.
+              </p>
+              <div className="space-y-4">
+                {[
+                  "Quick response within 24 hours",
+                  "Free consultation on hiring strategy",
+                  "No obligation quote",
+                  "Dedicated account manager",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-primary" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="glass-card p-8"
+            >
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName">Company Name *</Label>
+                    <Input
+                      id="companyName"
+                      name="companyName"
+                      value={formData.companyName}
+                      onChange={handleChange}
+                      required
+                      placeholder="Your company name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contactPerson">Contact Person *</Label>
+                    <Input
+                      id="contactPerson"
+                      name="contactPerson"
+                      value={formData.contactPerson}
+                      onChange={handleChange}
+                      required
+                      placeholder="Your name"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      placeholder="email@company.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      required
+                      placeholder="+91 98765 43210"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="positions">Number of Positions</Label>
+                    <Input
+                      id="positions"
+                      name="positions"
+                      value={formData.positions}
+                      onChange={handleChange}
+                      placeholder="e.g., 5"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Job Location</Label>
+                    <Input
+                      id="location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      placeholder="e.g., Bangalore"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="requirements">Job Requirements *</Label>
+                  <Textarea
+                    id="requirements"
+                    name="requirements"
+                    value={formData.requirements}
+                    onChange={handleChange}
+                    required
+                    placeholder="Please describe the role, required skills, experience level, and any other relevant details..."
+                    rows={5}
+                  />
+                </div>
+
+                <Button type="submit" size="lg" className="w-full">
+                  Submit Requirement <Send className="w-5 h-5" />
+                </Button>
+              </form>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+    </Layout>
+  );
+};
+
+export default Employers;
