@@ -6,6 +6,10 @@ import dotenv from "dotenv";
 // Import Routes
 import jobRoutes from "./routes/jobRoutes.js";
 import candidateRoutes from "./routes/candidateRoutes.js";
+import itRecruitmentRoutes from "./routes/itRecruitmentRoutes.js"; // <--- IMPORT
+import employerRequirementRoutes from "./routes/employerRequirementRoutes.js";
+import nonITRoleRoutes from "./routes/nonITRoleRoutes.js"; // <--- ADD THIS
+
 // Load environment variables
 dotenv.config();
 
@@ -17,14 +21,15 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   "https://vagarious-420.netlify.app", // Your Netlify Frontend
   "https://vagarious.onrender.com",    // Your Render Backend
-  "http://localhost:5173",             // Vite Localhost (Default)
+  "http://localhost:5173",             // Vite Localhost
   "http://localhost:8080",             // Your specific Localhost port
-  "http://localhost:5000"              // Backend Localhost
+  "http://localhost:5000"  ,
+   "http://localhost:3000"            // Backend Localhost
 ];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like Postman, mobile apps, or curl)
+    // Allow requests with no origin (like Postman, mobile apps, curl, or server-to-server)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.indexOf(origin) !== -1) {
@@ -34,16 +39,16 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true, // Allow cookies/headers if needed
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed HTTP methods
+  credentials: true, // Allow cookies/headers
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 };
 
-// Apply CORS Middleware
+// Apply Middleware
 app.use(cors(corsOptions)); 
 app.use(express.json()); // Parse JSON bodies
 
-// Database Connection
+// Database Connection Function
 const connectDB = async () => {
   try {
     if (!process.env.MONGO_URI) {
@@ -52,18 +57,20 @@ const connectDB = async () => {
     const conn = await mongoose.connect(process.env.MONGO_URI);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`Error: ${error.message}`);
+    console.error(`MongoDB Connection Error: ${error.message}`);
+    // On Render, we want to know why it failed, but not crash loop instantly if possible.
+    // However, without DB, the app is useless, so exiting is standard.
     process.exit(1);
   }
 };
 
-// Connect to Database
-connectDB();
-
 // Routes
 app.use("/api/jobs", jobRoutes);
-app.use("/api/candidates", candidateRoutes); // <--- USE THIS ROUTE
-// Root Route (Health Check & Debugging)
+app.use("/api/candidates", candidateRoutes);
+app.use("/api/it-recruitment", itRecruitmentRoutes); // <--- ADD THIS
+app.use("/api/employer-requirements", employerRequirementRoutes);
+app.use("/api/non-it-roles", nonITRoleRoutes); // <--- ADD THIS
+// Root Route (Health Check)
 app.get("/", (req, res) => {
   res.json({ 
     message: "VGS Recruitment API is running...", 
@@ -78,7 +85,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Internal Server Error" });
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// --- START SERVER ---
+// Only start the server if the database connects successfully
+connectDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+}).catch((err) => {
+    console.error("Failed to connect to DB, server not started:", err);
 });

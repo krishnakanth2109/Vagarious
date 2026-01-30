@@ -1,25 +1,12 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+// Import ALL icons that might be used
 import { 
-  ArrowRight, 
-  Code2, 
-  Database, 
-  Cloud, 
-  Shield, 
-  TestTube2,
-  Cpu,
-  Smartphone,
-  Globe,
-  Headphones,
-  Network,
-  Server,
-  Terminal,
-  Monitor,
-  Zap,
-  CheckCircle2,
-  Users,
-  BarChart,
-  Target
+  ArrowRight, Code2, Database, Cloud, Shield, TestTube2, 
+  Cpu, Smartphone, Globe, Headphones, Network, Server, 
+  Terminal, Monitor, Zap, Users, Target, Lock, Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
@@ -27,89 +14,54 @@ import { HeroBanner } from "@/components/shared/HeroBanner";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import heroIT from "@/assets/hero-about.jpg";
 
-const technologies = [
-  {
-    category: "Programming Languages",
-    items: ["JavaScript/TypeScript", "Python", "Java", "C#/.NET", "Go", "Ruby", "PHP", "Swift/Kotlin"]
-  },
-  {
-    category: "Frontend Frameworks",
-    items: ["React.js", "Angular", "Vue.js", "Next.js", "Svelte", "Tailwind CSS"]
-  },
-  {
-    category: "Backend & Databases",
-    items: ["Node.js", "Spring Boot", "Django", "PostgreSQL", "MongoDB", "Redis", "MySQL"]
-  },
-  {
-    category: "Cloud & DevOps",
-    items: ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform", "Jenkins"]
-  }
-];
+// Map strings to Actual Components
+const iconMap: Record<string, any> = {
+  Code2, Database, Cloud, Shield, TestTube2, Headphones, 
+  Server, Terminal, Monitor, Smartphone, Globe, Cpu, Network, Zap, 
+  Users, Target, Lock, Layers
+};
 
-const itRoles = [
-  {
-    icon: Code2,
-    title: "Software Development",
-    description: "Full-stack, frontend, and backend developers across all technologies and frameworks.",
-    skills: ["Web Development", "Mobile Apps", "Desktop Applications", "API Development"],
-    color: "from-blue-500 to-cyan-500"
-  },
-  {
-    icon: TestTube2,
-    title: "QA & Testing",
-    description: "Quality assurance engineers, test automation specialists, and manual testers.",
-    skills: ["Test Automation", "Performance Testing", "Security Testing", "Manual Testing"],
-    color: "from-purple-500 to-pink-500"
-  },
-  {
-    icon: Cloud,
-    title: "DevOps & Cloud",
-    description: "Cloud architects, DevOps engineers, and infrastructure specialists.",
-    skills: ["CI/CD Pipelines", "Cloud Migration", "Infrastructure as Code", "Monitoring"],
-    color: "from-orange-500 to-red-500"
-  },
-  {
-    icon: Database,
-    title: "Data & Analytics",
-    description: "Data scientists, data engineers, BI analysts, and machine learning engineers.",
-    skills: ["Data Pipelines", "Machine Learning", "Business Intelligence", "Big Data"],
-    color: "from-green-500 to-emerald-500"
-  },
-  {
-    icon: Shield,
-    title: "Cybersecurity",
-    description: "Security analysts, penetration testers, and security architects.",
-    skills: ["Network Security", "Application Security", "Compliance", "Incident Response"],
-    color: "from-yellow-500 to-amber-500"
-  },
-  {
-    icon: Headphones,
-    title: "IT Support & Infrastructure",
-    description: "System administrators, network engineers, and help desk professionals.",
-    skills: ["System Administration", "Network Management", "Technical Support", "Hardware"],
-    color: "from-indigo-500 to-blue-500"
-  }
-];
-
-const industries = [
-  { name: "FinTech & Banking", count: "200+" },
-  { name: "Healthcare IT", count: "150+" },
-  { name: "E-commerce & Retail", count: "180+" },
-  { name: "SaaS & Enterprise", count: "250+" },
-  { name: "Gaming & Entertainment", count: "120+" },
-  { name: "EdTech", count: "90+" }
-];
-
-const process = [
-  { step: "01", title: "Technical Requirement Analysis", description: "Deep dive into your technical stack, project requirements, and team dynamics." },
-  { step: "02", title: "Skill Mapping & Sourcing", description: "Identify and source candidates with precise technical skills and experience." },
-  { step: "03", title: "Technical Screening", description: "Comprehensive technical interviews, coding tests, and skill assessments." },
-  { step: "04", title: "Culture Fit Evaluation", description: "Assess candidate's alignment with your team culture and work methodology." },
-  { step: "05", title: "Technical Challenge Review", description: "Review of coding challenges, project assignments, and technical evaluations." },
-  { step: "06", title: "Offer & Onboarding Support", description: "Assist with technical onboarding, tool setup, and integration into your workflow." }
-];
+// --- DYNAMIC URL CONFIGURATION ---
+// This grabs 'http://localhost:5000/api' from your .env file
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_URL = `${BASE_URL}/it-recruitment`;
 
 const ITRecruitment = () => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log("Fetching from:", API_URL); // Debug log to check connection
+        const res = await axios.get(API_URL);
+        setData(res.data);
+      } catch (error) {
+        console.error("Failed to fetch IT data", error);
+        // We don't block the UI on error, just show empty or fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Use data from DB or fallback empty arrays to prevent crashes
+  const technologies = data?.technologies || [];
+  const itRoles = data?.roles || [];
+  const industries = data?.industries || [];
+  const process = data?.process || [];
+
+  if (loading) {
+     return (
+        <Layout>
+            <div className="h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        </Layout>
+     );
+  }
+
   return (
     <Layout>
       <HeroBanner
@@ -136,9 +88,9 @@ const ITRecruitment = () => {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {technologies.map((tech, index) => (
+            {technologies.length > 0 ? technologies.map((tech: any, index: number) => (
               <motion.div
-                key={tech.category}
+                key={index}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -149,7 +101,7 @@ const ITRecruitment = () => {
                   {tech.category}
                 </h3>
                 <ul className="space-y-2">
-                  {tech.items.map((item, i) => (
+                  {tech.items.map((item: string, i: number) => (
                     <li key={i} className="flex items-center gap-2 text-muted-foreground text-sm">
                       <div className="w-2 h-2 rounded-full bg-primary" />
                       {item}
@@ -157,7 +109,11 @@ const ITRecruitment = () => {
                   ))}
                 </ul>
               </motion.div>
-            ))}
+            )) : (
+                <div className="col-span-full text-center text-muted-foreground p-8 border border-dashed rounded-lg">
+                  No technologies configured in Admin Panel yet.
+                </div>
+            )}
           </div>
         </div>
       </section>
@@ -172,29 +128,37 @@ const ITRecruitment = () => {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {itRoles.map((role, index) => (
-              <motion.div
-                key={role.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="glass-card-hover p-6"
-              >
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${role.color} flex items-center justify-center mb-4`}>
-                  <role.icon className="w-7 h-7 text-white" />
+            {itRoles.length > 0 ? itRoles.map((role: any, index: number) => {
+              const IconComponent = iconMap[role.icon] || Code2;
+              
+              return (
+                <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    className="glass-card-hover p-6"
+                >
+                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${role.color || "from-blue-500 to-cyan-500"} flex items-center justify-center mb-4 shadow-lg`}>
+                    <IconComponent className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold font-heading mb-2">{role.title}</h3>
+                    <p className="text-muted-foreground mb-4 text-sm">{role.description}</p>
+                    <div className="flex flex-wrap gap-2">
+                    {role.skills.map((skill: string, i: number) => (
+                        <span key={i} className="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full border border-primary/20">
+                        {skill}
+                        </span>
+                    ))}
+                    </div>
+                </motion.div>
+              );
+            }) : (
+                <div className="col-span-full text-center text-muted-foreground p-8 border border-dashed rounded-lg">
+                  No roles configured in Admin Panel yet.
                 </div>
-                <h3 className="text-xl font-bold font-heading mb-2">{role.title}</h3>
-                <p className="text-muted-foreground mb-4 text-sm">{role.description}</p>
-                <div className="flex flex-wrap gap-2">
-                  {role.skills.map((skill, i) => (
-                    <span key={i} className="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
+            )}
           </div>
         </div>
       </section>
@@ -209,14 +173,14 @@ const ITRecruitment = () => {
           />
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {industries.map((industry, index) => (
+            {industries.map((industry: any, index: number) => (
               <motion.div
-                key={industry.name}
+                key={index}
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.05 }}
-                className="text-center p-4 rounded-xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-primary transition-colors"
+                className="text-center p-4 rounded-xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-primary transition-colors hover:shadow-md"
               >
                 <div className="text-2xl font-bold text-primary mb-1">{industry.count}</div>
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{industry.name}</div>
@@ -237,14 +201,14 @@ const ITRecruitment = () => {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {process.map((step, index) => (
+            {process.map((step: any, index: number) => (
               <motion.div
-                key={step.step}
+                key={index}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="relative bg-secondary-foreground/5 rounded-2xl p-6 border border-secondary-foreground/10"
+                className="relative bg-secondary-foreground/5 rounded-2xl p-6 border border-secondary-foreground/10 hover:bg-secondary-foreground/10 transition-colors"
               >
                 <span className="text-5xl font-bold font-heading text-primary/20 absolute top-4 right-4">
                   {step.step}
@@ -256,16 +220,11 @@ const ITRecruitment = () => {
           </div>
         </div>
       </section>
-
+      
       {/* CTA */}
       <section className="section-padding">
         <div className="container-custom">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center"
-          >
+          <div className="text-center">
             <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4">
               Ready to Build Your Tech Dream Team?
             </h2>
@@ -275,14 +234,14 @@ const ITRecruitment = () => {
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" asChild>
                 <Link to="/employers">
-                  Hire IT Professionals <ArrowRight className="w-5 h-5" />
+                  Hire IT Professionals <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
               <Button variant="outline" size="lg" asChild>
                 <Link to="/contact">Get Technical Assessment</Link>
               </Button>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
     </Layout>

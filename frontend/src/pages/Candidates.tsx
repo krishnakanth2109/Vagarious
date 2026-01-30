@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/accordion";
 import heroCandidates from "@/assets/hero-candidates.jpg";
 import axios from "axios";
-
+console.log("Current API URL:", import.meta.env.VITE_API_URL);
 // Static Data
 const applicationProcess = [
   { icon: FileText, title: "Submit Resume", description: "Upload your updated resume through our portal or send via email." },
@@ -42,8 +42,11 @@ const benefits = [
   "Career counseling", "100% confidential process",
 ];
 
-// Determine Base API URL (e.g., http://localhost:5000/api)
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+// ---------------------------------------------------------
+// IMPORT API URL FROM .ENV
+// ---------------------------------------------------------
+// This will use 'https://vagarious.onrender.com/api' from your screenshot
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const Candidates = () => {
   const { toast } = useToast();
@@ -68,20 +71,26 @@ const Candidates = () => {
     message: "",
   });
 
-  // Fetch Jobs
+  // Fetch Jobs from Backend
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const response = await axios.get(`${BASE_URL}/jobs`);
+        // GET request to /api/jobs
+        const response = await axios.get(`${API_URL}/jobs`);
         setJobs(response.data);
       } catch (error) {
         console.error("Failed to fetch jobs:", error);
+        toast({
+          title: "Connection Error",
+          description: "Could not load jobs. Please check your connection.",
+          variant: "destructive",
+        });
       } finally {
         setJobsLoading(false);
       }
     };
     fetchJobs();
-  }, []);
+  }, [toast]);
 
   // Handle Form Change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -94,8 +103,8 @@ const Candidates = () => {
     setIsSubmitting(true);
 
     try {
-      // POST data to backend
-      await axios.post(`${BASE_URL}/candidates`, formData);
+      // POST request to /api/candidates
+      await axios.post(`${API_URL}/candidates`, formData);
 
       toast({
         title: "Profile Submitted!",
@@ -239,7 +248,40 @@ const Candidates = () => {
         </div>
       </section>
 
-      {/* Application Process Section (Hidden for brevity, same as before) */}
+      {/* Application Process Section */}
+      <section className="section-padding bg-muted/50">
+        <div className="container-custom">
+          <SectionHeading
+            subtitle="How It Works"
+            title="Your Journey to Success"
+            description="Our streamlined process makes job hunting easy and stress-free."
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {applicationProcess.map((step, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="text-center relative"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-sky-dark mx-auto mb-4 flex items-center justify-center">
+                  <step.icon className="w-8 h-8 text-primary-foreground" />
+                </div>
+                <h3 className="font-bold font-heading mb-2">{step.title}</h3>
+                <p className="text-sm text-muted-foreground">{step.description}</p>
+                {index < applicationProcess.length - 1 && (
+                  <div className="hidden lg:block absolute top-8 left-full w-full">
+                    <ArrowRight className="w-6 h-6 text-primary/30 mx-auto" />
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Register Form */}
       <section id="register" className="section-padding scroll-mt-24">
@@ -323,7 +365,7 @@ const Candidates = () => {
         </div>
       </section>
 
-      {/* FAQs Section (Same as before) */}
+      {/* FAQs Section */}
       <section className="section-padding bg-muted/50">
         <div className="container-custom">
           <SectionHeading subtitle="FAQs" title="Frequently Asked Questions" description="Find answers to common questions." />

@@ -1,25 +1,23 @@
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import * as LucideIcons from "lucide-react"; // Import all icons
 import { 
   ArrowRight, 
-  BarChart3,
-  Users,
-  Calculator,
-  Building2,
-  Briefcase,
-  Headphones,
+  CheckCircle2, 
   Target,
-  DollarSign,
-  MessageSquare,
   FileText,
+  Users,
+  Shield,
+  Zap,
   ShoppingBag,
-  Truck,
   Factory,
   Heart,
   GraduationCap,
-  CheckCircle2,
-  Shield,
-  Zap
+  Truck,
+  DollarSign,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
@@ -27,51 +25,8 @@ import { HeroBanner } from "@/components/shared/HeroBanner";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import heroNonIT from "@/assets/hero-employers.jpg";
 
-const nonItRoles = [
-  {
-    icon: BarChart3,
-    title: "Sales & Marketing",
-    description: "Drive revenue growth with expert sales professionals and marketing strategists.",
-    positions: ["Sales Executives", "Business Development", "Digital Marketing", "Brand Managers", "Market Research"],
-    color: "from-blue-500 to-cyan-500"
-  },
-  {
-    icon: Users,
-    title: "Human Resources",
-    description: "Build strong organizational culture with HR experts and talent management professionals.",
-    positions: ["HR Managers", "Talent Acquisition", "HR Business Partners", "L&D Specialists", "Compensation & Benefits"],
-    color: "from-purple-500 to-pink-500"
-  },
-  {
-    icon: Calculator,
-    title: "Finance & Accounting",
-    description: "Financial experts for accounting, auditing, financial analysis, and strategic planning.",
-    positions: ["Accountants", "Financial Analysts", "Auditors", "Tax Consultants", "Finance Controllers"],
-    color: "from-green-500 to-emerald-500"
-  },
-  {
-    icon: Building2,
-    title: "Operations & Supply Chain",
-    description: "Streamline operations with logistics, supply chain, and process improvement experts.",
-    positions: ["Operations Managers", "Supply Chain", "Logistics Coordinators", "Process Improvement", "Quality Control"],
-    color: "from-orange-500 to-red-500"
-  },
-  {
-    icon: Briefcase,
-    title: "Admin & Secretarial",
-    description: "Efficient administrative professionals to support business operations.",
-    positions: ["Executive Assistants", "Office Managers", "Administrative Staff", "Receptionists", "Facility Managers"],
-    color: "from-yellow-500 to-amber-500"
-  },
-  {
-    icon: Headphones,
-    title: "Customer Support",
-    description: "Enhance customer experience with support and service professionals.",
-    positions: ["Customer Service Reps", "Call Center Agents", "Customer Success", "Support Managers", "Technical Support"],
-    color: "from-indigo-500 to-blue-500"
-  }
-];
-
+// Hardcoded industries (Static as per request to only change Roles dynamically, 
+// but you can apply the same logic to industries if needed)
 const industries = [
   {
     icon: ShoppingBag,
@@ -169,7 +124,33 @@ const benefits = [
   }
 ];
 
+// Helper component to render dynamic icon
+const DynamicIcon = ({ name, className }: { name: string; className?: string }) => {
+  // @ts-ignore
+  const IconComponent = LucideIcons[name];
+  if (!IconComponent) return <LucideIcons.Briefcase className={className} />; // Fallback
+  return <IconComponent className={className} />;
+};
+
 const NonITRecruitment = () => {
+  const [roles, setRoles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/non-it-roles`);
+        setRoles(response.data);
+      } catch (error) {
+        console.error("Error fetching roles:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRoles();
+  }, [API_URL]);
+
   return (
     <Layout>
       <HeroBanner
@@ -186,7 +167,7 @@ const NonITRecruitment = () => {
         </Button>
       </HeroBanner>
 
-      {/* Non-IT Roles */}
+      {/* Non-IT Roles - DYNAMIC SECTION */}
       <section className="section-padding scroll-mt-24">
         <div className="container-custom">
           <SectionHeading
@@ -195,36 +176,56 @@ const NonITRecruitment = () => {
             description="We recruit across all business domains to help you build a complete, high-performing organization."
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {nonItRoles.map((role, index) => (
-              <motion.div
-                key={role.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="glass-card-hover p-6"
-              >
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${role.color} flex items-center justify-center mb-4`}>
-                  <role.icon className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-xl font-bold font-heading mb-2">{role.title}</h3>
-                <p className="text-muted-foreground mb-4 text-sm">{role.description}</p>
-                <ul className="space-y-2">
-                  {role.positions.map((position, i) => (
-                    <li key={i} className="flex items-center gap-2 text-muted-foreground text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      {position}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            ))}
-          </div>
+          {loading ? (
+             <div className="flex justify-center items-center h-40">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {roles.map((role, index) => (
+                <motion.div
+                  key={role._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="glass-card-hover p-6 flex flex-col h-full"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${role.color || "from-blue-500 to-cyan-500"} flex items-center justify-center`}>
+                      <DynamicIcon name={role.icon} className="w-7 h-7 text-white" />
+                    </div>
+                    {/* Render Image if available */}
+                    {role.image && (
+                        <img 
+                            src={role.image} 
+                            alt={role.title} 
+                            className="w-14 h-14 rounded-2xl object-cover border border-gray-100 shadow-sm"
+                        />
+                    )}
+                  </div>
+                  
+                  <h3 className="text-xl font-bold font-heading mb-2">{role.title}</h3>
+                  <p className="text-muted-foreground mb-4 text-sm flex-grow">{role.description}</p>
+                  
+                  <div className="mt-auto">
+                    <ul className="space-y-2">
+                        {role.positions.map((position: string, i: number) => (
+                        <li key={i} className="flex items-center gap-2 text-muted-foreground text-sm">
+                            <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                            {position}
+                        </li>
+                        ))}
+                    </ul>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Industry Specializations */}
+      {/* Industry Specializations (Static for now) */}
       <section className="section-padding bg-muted/50">
         <div className="container-custom">
           <SectionHeading

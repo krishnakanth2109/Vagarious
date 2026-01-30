@@ -3,26 +3,28 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { 
   LayoutDashboard, 
-  Users, 
   Settings, 
   LogOut, 
   Bell,
-  Search,
   UserCheck,
   Briefcase,
-  FileText
+  FileText,
+  FileCode2,
+  Building2, // Imported for Non-IT
+  Users      // Imported for generic roles
 } from "lucide-react";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  title: string;
+  title?: string;
 }
 
-const AdminLayout = ({ children, title }: AdminLayoutProps) => {
+const AdminLayout = ({ children, title = "Dashboard" }: AdminLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const appName = import.meta.env.VITE_APP_NAME || "Admin Portal";
+  const appName = import.meta.env.VITE_APP_NAME || "VGS Admin";
 
+  // Check Authentication on Mount
   useEffect(() => {
     const isAuth = sessionStorage.getItem("isAuthenticated");
     if (!isAuth) {
@@ -37,13 +39,15 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
     navigate("/login");
   };
 
-  // --- UPDATED MENU ITEMS ---
+  // --- MENU ITEMS CONFIGURATION ---
   const menuItems = [
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "Jobs", path: "/admin-jobs", icon: Briefcase },
-    // This points to the new Admin Candidates page
     { name: "Applications", path: "/admin-candidates", icon: FileText }, 
+    { name: "IT Recruitment", path: "/admin-it-recruitment", icon: FileCode2 },
+    { name: "Non-IT Recruitment", path: "/admin-non-it-roles", icon: Building2 }, // <--- ADDED LINK
     { name: "Recruiters", path: "/recruiters", icon: UserCheck },
+    { name: "Employer Reqs", path: "/admin-requirements", icon: Users },
     { name: "Settings", path: "/settings", icon: Settings },
   ];
 
@@ -58,7 +62,7 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
             <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Management</p>
         </div>
         
-        <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto">
+        <nav className="flex-1 px-4 space-y-2 mt-6 overflow-y-auto custom-scrollbar">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
@@ -89,16 +93,25 @@ const AdminLayout = ({ children, title }: AdminLayoutProps) => {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN CONTENT WRAPPER */}
       <div className="flex-1 flex flex-col min-h-screen md:ml-72 transition-all duration-300">
+        {/* HEADER */}
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-10">
-          <div><h2 className="text-2xl font-bold text-gray-800 tracking-tight">{title}</h2></div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800 tracking-tight">{title}</h2>
+          </div>
           <div className="flex items-center gap-4">
             <button className="p-2 relative text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
                 <Bell size={20} />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
             </button>
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+              A
+            </div>
           </div>
         </header>
+
+        {/* PAGE CONTENT */}
         <main className="flex-1 p-8 overflow-y-auto bg-gray-50">
             <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {children}

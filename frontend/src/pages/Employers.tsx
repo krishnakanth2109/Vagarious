@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import { 
   ArrowRight, 
   CheckCircle2, 
@@ -16,7 +17,8 @@ import {
   Factory,
   ShoppingBag,
   Headphones,
-  Send
+  Send,
+  Loader2 // Imported for loading state
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,33 +101,57 @@ const hiringProcess = [
 
 const Employers = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  
+  // Access the API URL from .env
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const [formData, setFormData] = useState({
     companyName: "",
     contactPerson: "",
     email: "",
     phone: "",
-    designation: "",
     requirements: "",
     positions: "",
     location: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Requirement Submitted!",
-      description: "Our recruitment team will contact you within 24 hours.",
-    });
-    setFormData({
-      companyName: "",
-      contactPerson: "",
-      email: "",
-      phone: "",
-      designation: "",
-      requirements: "",
-      positions: "",
-      location: "",
-    });
+    setLoading(true);
+
+    try {
+      // Send POST request to backend
+      const response = await axios.post(`${API_URL}/employer-requirements`, formData);
+
+      if (response.data.success) {
+        toast({
+          title: "Requirement Submitted Successfully!",
+          description: "Our recruitment team will contact you within 24 hours.",
+          variant: "default", // You can use "success" if defined in your theme
+        });
+
+        // Reset form
+        setFormData({
+          companyName: "",
+          contactPerson: "",
+          email: "",
+          phone: "",
+          requirements: "",
+          positions: "",
+          location: "",
+        });
+      }
+    } catch (error: any) {
+      console.error("Submission Error:", error);
+      toast({
+        title: "Submission Failed",
+        description: error.response?.data?.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -405,8 +431,16 @@ const Employers = () => {
                   />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full">
-                  Submit Requirement <Send className="w-5 h-5" />
+                <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      Submitting... <Loader2 className="w-5 h-5 ml-2 animate-spin" />
+                    </>
+                  ) : (
+                    <>
+                      Submit Requirement <Send className="w-5 h-5 ml-2" />
+                    </>
+                  )}
                 </Button>
               </form>
             </motion.div>

@@ -294,12 +294,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-xl font-bold font-heading mb-2">{service.title}</h3>
                 <p className="text-muted-foreground mb-4">{service.description}</p>
-                <Link
-                  to="/services"
-                  className="inline-flex items-center text-primary font-semibold hover:gap-3 gap-2 transition-all"
-                >
-                  Learn More <ArrowRight className="w-4 h-4" />
-                </Link>
+              
               </motion.div>
             ))}
           </div>
