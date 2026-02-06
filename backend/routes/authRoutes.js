@@ -8,7 +8,7 @@ dotenv.config();
 const router = express.Router();
 
 /* ===============================
-   NODEMAILER SMTP CONFIGURATION
+   SMTP CONFIG (GMAIL)
    =============================== */
 
 const transporter = nodemailer.createTransport({
@@ -16,28 +16,30 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false, // TLS
   auth: {
-    user: process.env.EMAIL_USER, // your gmail
-    pass: process.env.EMAIL_PASS, // gmail APP PASSWORD
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // App password (16 chars)
+  },
+  tls: {
+    rejectUnauthorized: false,
   },
 });
 
-// Verify SMTP once at startup
-transporter.verify((error) => {
-  if (error) {
-    console.error("❌ SMTP connection failed:", error);
+// Verify once on server boot
+transporter.verify((err) => {
+  if (err) {
+    console.error("❌ SMTP VERIFY FAILED:", err);
   } else {
-    console.log("✅ SMTP server is ready to send emails");
+    console.log("✅ SMTP READY (Gmail connected)");
   }
 });
 
 /* ===============================
-   1. LOGIN
+   LOGIN
    =============================== */
-
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
+
     const admin = await Admin.findOne({ email });
     if (!admin) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -50,7 +52,7 @@ router.post("/login", async (req, res) => {
 
     res.json({
       message: "Login successful",
-      user: { email: admin.email, id: admin._id },
+      user: { id: admin._id, email: admin.email },
     });
   } catch (err) {
     console.error(err);
@@ -59,22 +61,20 @@ router.post("/login", async (req, res) => {
 });
 
 /* ===============================
-   2. FORGOT PASSWORD (SEND OTP)
+   FORGOT PASSWORD (SEND OTP)
    =============================== */
-
 router.post("/forgot-password", async (req, res) => {
-  const { email } = req.body;
-
   try {
+    const { email } = req.body;
+
     const admin = await Admin.findOne({ email });
     if (!admin) {
-      return res.status(404).json({ message: "Admin email not found" });
+      return res.status(404).json({ message: "Admin not found" });
     }
 
-    // Generate 6-digit OTP
+    // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Save OTP & expiry (10 minutes)
     admin.otp = otp;
     admin.otpExpires = Date.now() + 10 * 60 * 1000;
     await admin.save();
@@ -82,46 +82,38 @@ router.post("/forgot-password", async (req, res) => {
     const mailOptions = {
       from: `"VGS Security" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Vagarious Solutions - Password Reset OTP",
+      subject: "Password Reset OTP",
+      text: `Your OTP is ${otp}. It expires in 10 minutes.`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
-          <h2 style="color: #4f46e5; text-align: center;">Password Reset OTP</h2>
-          <p>Hello,</p>
-          <p>Please use the OTP below to reset your password:</p>
-          <div style="text-align: center; margin: 25px 0;">
-            <span style="font-size: 28px; font-weight: bold; color: #fff; background: #4f46e5; padding: 12px 25px; border-radius: 6px;">
-              ${otp}
-            </span>
-          </div>
-          <p style="font-size: 13px; color: #666; text-align: center;">
-            This OTP will expire in 10 minutes.
-          </p>
+        <div style="font-family:Arial;padding:20px">
+          <h2>Password Reset OTP</h2>
+          <p>Your OTP:</p>
+          <h1 style="letter-spacing:4px">${otp}</h1>
+          <p>Valid for 10 minutes.</p>
         </div>
       `,
     };
 
-    // Respond immediately (FAST)
-    res.json({ message: "OTP sent successfully" });
+    // Respond fast
+    res.json({ message: "OTP sent (check inbox / spam)" });
 
-    // Send email in background (IMPORTANT)
-    transporter.sendMail(mailOptions)
-      .then(() => console.log(`✅ OTP email sent to ${email}`))
-      .catch(err => console.error("❌ Email send error:", err));
+    // Send mail async
+    const info = await transporter.sendMail(mailOptions);
+    console.log("📧 Mail sent:", info.accepted);
 
   } catch (err) {
-    console.error("❌ Forgot password error:", err);
+    console.error("❌ OTP SEND ERROR:", err);
     res.status(500).json({ message: "Failed to send OTP" });
   }
 });
 
 /* ===============================
-   3. RESET PASSWORD (VERIFY OTP)
+   RESET PASSWORD
    =============================== */
-
 router.post("/reset-password", async (req, res) => {
-  const { email, otp, newPassword } = req.body;
-
   try {
+    const { email, otp, newPassword } = req.body;
+
     const admin = await Admin.findOne({
       email,
       otp,
@@ -132,14 +124,12 @@ router.post("/reset-password", async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    admin.password = hashedPassword;
+    admin.password = await bcrypt.hash(newPassword, 10);
     admin.otp = null;
     admin.otpExpires = null;
     await admin.save();
 
-    res.json({ message: "Password reset successful. Please login." });
+    res.json({ message: "Password reset successful" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -147,23 +137,24 @@ router.post("/reset-password", async (req, res) => {
 });
 
 /* ===============================
-   4. SEED ADMIN (OPTIONAL)
+   SEED ADMIN (OPTIONAL)
    =============================== */
-
 router.post("/seed", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const existing = await Admin.findOne({ email });
-    if (existing) {
+    const exists = await Admin.findOne({ email });
+    if (exists) {
       return res.status(400).json({ message: "Admin already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newAdmin = new Admin({ email, password: hashedPassword });
+    const admin = new Admin({
+      email,
+      password: await bcrypt.hash(password, 10),
+    });
 
-    await newAdmin.save();
-    res.json({ message: "Admin created successfully" });
+    await admin.save();
+    res.json({ message: "Admin created" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
