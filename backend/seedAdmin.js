@@ -1,41 +1,60 @@
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
-import Admin from "./models/Admin.js";
+import bcrypt from "bcryptjs";
+import Admin from "./models/Admin.js"; // Ensure this path matches your file structure
 
 dotenv.config();
 
 const seedAdmin = async () => {
   try {
+    // 1. Connect to MongoDB
+    if (!process.env.MONGO_URI) {
+      throw new Error("❌ MONGO_URI is missing from .env file");
+    }
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("MongoDB Connected for seeding...");
+    console.log("✅ Connected to MongoDB");
 
-    const adminEmail = "admin@admin.com";
-    const plainPassword = "admi"; // The password from your Login.jsx component
+    // 2. Define Admin Credentials
+    const email = "career.arahinfotech@gmail.com";
+    const password = "Vgs@2026";
 
-    // Check if admin exists
-    const existingAdmin = await Admin.findOne({ email: adminEmail });
+    // 3. Check if Admin already exists
+    const existingAdmin = await Admin.findOne({ email });
+
     if (existingAdmin) {
-      console.log("Admin user already exists.");
-      process.exit(0);
+      // Update existing admin password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      existingAdmin.password = hashedPassword;
+      // Reset OTP fields just in case
+      existingAdmin.otp = null;
+      existingAdmin.otpExpires = null;
+      
+      await existingAdmin.save();
+      console.log(`♻️  Admin found. Password updated for: ${email}`);
+    } else {
+      // Create new Admin
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      const newAdmin = new Admin({
+        email,
+        password: hashedPassword,
+        otp: null,
+        otpExpires: null
+      });
+
+      await newAdmin.save();
+      console.log(`🎉 Admin created successfully: ${email}`);
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(plainPassword, salt);
-
-    // Create Admin
-    await Admin.create({
-      email: adminEmail,
-      password: hashedPassword,
-    });
-
-    console.log("Admin user created successfully!");
-    process.exit(0);
   } catch (error) {
-    console.error("Seeding failed:", error);
-    process.exit(1);
+    console.error("❌ Error seeding admin:", error.message);
+  } finally {
+    // 4. Close Connection
+    await mongoose.connection.close();
+    console.log("👋 Database connection closed");
+    process.exit();
   }
 };
 
+// Run the function
 seedAdmin();
