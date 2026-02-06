@@ -8,7 +8,7 @@ dotenv.config();
 const router = express.Router();
 
 /* ===============================
-   SMTP CONFIG (GMAIL)
+   SMTP CONFIG (GMAIL — FIXED)
    =============================== */
 
 const transporter = nodemailer.createTransport({
@@ -16,20 +16,21 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false, // TLS
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // App password (16 chars)
+    user: process.env.EMAIL_USER, // your gmail
+    pass: process.env.EMAIL_PASS, // 16-char App Password
   },
+  family: 4, // ✅ FORCE IPv4 (CRITICAL FIX FOR RENDER)
   tls: {
     rejectUnauthorized: false,
   },
 });
 
-// Verify once on server boot
+// Verify SMTP on boot
 transporter.verify((err) => {
   if (err) {
     console.error("❌ SMTP VERIFY FAILED:", err);
   } else {
-    console.log("✅ SMTP READY (Gmail connected)");
+    console.log("✅ SMTP READY (Gmail connected via IPv4)");
   }
 });
 
@@ -85,24 +86,30 @@ router.post("/forgot-password", async (req, res) => {
       subject: "Password Reset OTP",
       text: `Your OTP is ${otp}. It expires in 10 minutes.`,
       html: `
-        <div style="font-family:Arial;padding:20px">
+        <div style="font-family: Arial; padding: 20px">
           <h2>Password Reset OTP</h2>
           <p>Your OTP:</p>
-          <h1 style="letter-spacing:4px">${otp}</h1>
+          <h1 style="letter-spacing: 4px;">${otp}</h1>
           <p>Valid for 10 minutes.</p>
         </div>
       `,
     };
 
-    // Respond fast
-    res.json({ message: "OTP sent (check inbox / spam)" });
+    // 🚀 Respond immediately (fast API)
+    res.json({ message: "OTP sent successfully" });
 
-    // Send mail async
-    const info = await transporter.sendMail(mailOptions);
-    console.log("📧 Mail sent:", info.accepted);
+    // 📧 Send email in background
+    transporter
+      .sendMail(mailOptions)
+      .then((info) => {
+        console.log("📧 OTP mail sent:", info.accepted);
+      })
+      .catch((err) => {
+        console.error("❌ MAIL SEND FAILED:", err);
+      });
 
   } catch (err) {
-    console.error("❌ OTP SEND ERROR:", err);
+    console.error("❌ OTP ERROR:", err);
     res.status(500).json({ message: "Failed to send OTP" });
   }
 });
