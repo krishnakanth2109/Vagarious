@@ -8,7 +8,8 @@ import jobRoutes from "./routes/jobRoutes.js";
 import candidateRoutes from "./routes/candidateRoutes.js";
 import itRecruitmentRoutes from "./routes/itRecruitmentRoutes.js"; // <--- IMPORT
 import employerRequirementRoutes from "./routes/employerRequirementRoutes.js";
-import nonITRoleRoutes from "./routes/nonITRoleRoutes.js"; // <--- ADD THIS
+import nonITRoleRoutes from "./routes/nonITRoleRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js"; // <--- IMPORT THIS
 
 // Load environment variables
 dotenv.config();
@@ -23,8 +24,8 @@ const allowedOrigins = [
   "https://vagarious.onrender.com",    // Your Render Backend
   "http://localhost:5173",             // Vite Localhost
   "http://localhost:8080",             // Your specific Localhost port
-  "http://localhost:5000"  ,
-   "http://localhost:3000"            // Backend Localhost
+  "http://localhost:5000",
+  "http://localhost:3000"            // Backend Localhost
 ];
 
 const corsOptions = {
@@ -45,7 +46,7 @@ const corsOptions = {
 };
 
 // Apply Middleware
-app.use(cors(corsOptions)); 
+app.use(cors(corsOptions));
 app.use(express.json()); // Parse JSON bodies
 
 // Database Connection Function
@@ -60,7 +61,8 @@ const connectDB = async () => {
     console.error(`MongoDB Connection Error: ${error.message}`);
     // On Render, we want to know why it failed, but not crash loop instantly if possible.
     // However, without DB, the app is useless, so exiting is standard.
-    process.exit(1);
+    // process.exit(1); // Do not crash the app if DB fails, so Chatbot can still work
+    console.warn("Continuing without DB connection...");
   }
 };
 
@@ -69,11 +71,13 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/candidates", candidateRoutes);
 app.use("/api/it-recruitment", itRecruitmentRoutes); // <--- ADD THIS
 app.use("/api/employer-requirements", employerRequirementRoutes);
-app.use("/api/non-it-roles", nonITRoleRoutes); // <--- ADD THIS
+app.use("/api/non-it-roles", nonITRoleRoutes);
+app.use("/api/chat", chatRoutes); // <--- Chatbot Route
+
 // Root Route (Health Check)
 app.get("/", (req, res) => {
-  res.json({ 
-    message: "VGS Recruitment API is running...", 
+  res.json({
+    message: "VGS Recruitment API is running...",
     environment: process.env.NODE_ENV || "development",
     cors_allowed: allowedOrigins
   });
@@ -88,9 +92,13 @@ app.use((err, req, res, next) => {
 // --- START SERVER ---
 // Only start the server if the database connects successfully
 connectDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 }).catch((err) => {
-    console.error("Failed to connect to DB, server not started:", err);
+  console.error("Failed to connect to DB:", err.message);
+  console.log("Starting server in Offline Mode (for Chatbot only)...");
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 });

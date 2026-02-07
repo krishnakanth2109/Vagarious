@@ -18,16 +18,17 @@ import NonITRecruitment from "./pages/NonITRecruitment";
 import StaffingModels from "./pages/StaffingModels";
 
 // Utilities
-import ScrollToTop from "./components/ScrollToTop"; 
+import ScrollToTop from "./components/ScrollToTop";
+import { Chatbot } from "./components/Chatbot";
 
 // Admin Pages
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import AdminJobs from "./pages/admin/AdminJobs";
-import AdminCandidates from "./pages/admin/AdminCandidates"; 
-import AdminITRecruitment from "./pages/admin/AdminITRecruitment"; 
-import AdminEmployerRequirements from "./pages/admin/AdminEmployerRequirements"; 
+import AdminCandidates from "./pages/admin/AdminCandidates";
+import AdminITRecruitment from "./pages/admin/AdminITRecruitment";
+import AdminEmployerRequirements from "./pages/admin/AdminEmployerRequirements";
 import AdminNonITRoles from "./pages/admin/AdminNonITRoles"; // <--- IMPORT THIS
 
 const queryClient = new QueryClient();
@@ -39,8 +40,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         {/* Ensures page scrolls to top on route change */}
-        <ScrollToTop /> 
-        
+        <ScrollToTop />
+        <Chatbot />
+
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Index />} />
@@ -61,12 +63,12 @@ const App = () => (
           <Route path="/admin-jobs" element={<AdminJobs />} />
           <Route path="/admin-candidates" element={<AdminCandidates />} />
           <Route path="/admin-it-recruitment" element={<AdminITRecruitment />} />
-          
+
           {/* NEW NON-IT ROUTE */}
           <Route path="/admin-non-it-roles" element={<AdminNonITRoles />} />
 
           <Route path="/admin-requirements" element={<AdminEmployerRequirements />} />
-     
+
           {/* 404 Route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
