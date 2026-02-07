@@ -18,31 +18,53 @@ import NonITRecruitment from "./pages/NonITRecruitment";
 import StaffingModels from "./pages/StaffingModels";
 
 // Utilities
+<<<<<<< HEAD
 import ScrollToTop from "./components/ScrollToTop";
 import { Chatbot } from "./components/Chatbot";
+=======
+
+
+// Components
+import Chatbot from "./components/Chatbot"; // <--- 1. IMPORT CHATBOT
+>>>>>>> b2f902fb7074265c690bd0d496376c8f821b4659
 
 // Admin Pages
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import AdminJobs from "./pages/admin/AdminJobs";
+<<<<<<< HEAD
 import AdminCandidates from "./pages/admin/AdminCandidates";
 import AdminITRecruitment from "./pages/admin/AdminITRecruitment";
 import AdminEmployerRequirements from "./pages/admin/AdminEmployerRequirements";
 import AdminNonITRoles from "./pages/admin/AdminNonITRoles"; // <--- IMPORT THIS
+=======
+import AdminCandidates from "./pages/admin/AdminCandidates"; 
+import AdminITRecruitment from "./pages/admin/AdminITRecruitment"; 
+import AdminEmployerRequirements from "./pages/admin/AdminEmployerRequirements"; 
+import AdminNonITRoles from "./pages/admin/AdminNonITRoles";
+>>>>>>> b2f902fb7074265c690bd0d496376c8f821b4659
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App: React.FC = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
         {/* Ensures page scrolls to top on route change */}
+<<<<<<< HEAD
         <ScrollToTop />
         <Chatbot />
 
+=======
+       
+        
+        {/* Chatbot appears on all pages */}
+        <Chatbot />  {/* <--- 2. ADD COMPONENT HERE */}
+        
+>>>>>>> b2f902fb7074265c690bd0d496376c8f821b4659
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Index />} />
@@ -63,10 +85,13 @@ const App = () => (
           <Route path="/admin-jobs" element={<AdminJobs />} />
           <Route path="/admin-candidates" element={<AdminCandidates />} />
           <Route path="/admin-it-recruitment" element={<AdminITRecruitment />} />
+<<<<<<< HEAD
 
           {/* NEW NON-IT ROUTE */}
+=======
+          
+>>>>>>> b2f902fb7074265c690bd0d496376c8f821b4659
           <Route path="/admin-non-it-roles" element={<AdminNonITRoles />} />
-
           <Route path="/admin-requirements" element={<AdminEmployerRequirements />} />
 
           {/* 404 Route */}
