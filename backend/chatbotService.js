@@ -1,4 +1,4 @@
-// --- START OF FILE chatbotService.js ---
+// File: chatbotService.js
 
 import puppeteer from "puppeteer";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -17,45 +17,35 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * 1. PUPPETEER SCRAPER LOGIC
+ * Optimized for speed and low memory usage
  */
 async function scrapeWebsite(url) {
   let browser;
   try {
     browser = await puppeteer.launch({
-      headless: true, // Set to true for production/servers
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--disable-blink-features=AutomationControlled"
-      ]
+      headless: "new", 
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     });
 
     const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 720 });
 
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    );
-
-    await page.setViewport({ width: 1366, height: 768 });
-    console.log("🌐 Opening:", url);
-
+    console.log("🌐 Scraping:", url);
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
-    // Wait for dynamic content
-    await delay(3000);
+    // Minimal delay for dynamic content to load
+    await delay(1500);
 
     const content = await page.evaluate(() => {
-      // Remove non-essential elements to clean up text
-      document.querySelectorAll("script, style, nav, footer, header, noscript").forEach(el => el.remove());
+      // Remove noise to save tokens and speed up AI processing
+      document.querySelectorAll("script, style, nav, footer, header, noscript, iframe, ads").forEach(el => el.remove());
+      // Clean up whitespace and newlines for faster reading
       return document.body.innerText.replace(/\s+/g, " ").trim();
     });
 
     return content;
-
   } catch (err) {
-    console.error(`❌ Puppeteer error on ${url}:`, err.message);
+    console.error(`❌ Scraper error on ${url}:`, err.message);
     return "";
   } finally {
     if (browser) await browser.close();
@@ -67,11 +57,9 @@ async function scrapeWebsite(url) {
  */
 export async function loadKnowledge() {
   if (!process.env.GOOGLE_API_KEY) {
-    console.error("❌ Missing GOOGLE_API_KEY in .env file. Chatbot will not work.");
+    console.error("❌ Missing GOOGLE_API_KEY. AI disabled.");
     return;
   }
-
-  console.log("🔄 Starting knowledge base update...");
 
   const urls = [
     "https://www.vagarioussolutions.com",
@@ -81,64 +69,50 @@ export async function loadKnowledge() {
   ];
 
   let combinedText = "";
-
   for (const url of urls) {
-    try {
-      const text = await scrapeWebsite(url);
-      if (!text || text.length < 200) {
-        console.log("❌ Skipped (No content):", url);
-        continue;
-      }
-      combinedText += `\n\nCONTENT FROM ${url}:\n${text}`;
-      console.log("✅ Loaded:", url);
-    } catch (err) {
-      console.log("❌ Failed to load:", url);
+    const text = await scrapeWebsite(url);
+    if (text && text.length > 100) {
+      combinedText += `\n\n[Source: ${url}]\n${text}`;
     }
   }
 
   websiteKnowledge = combinedText;
-  console.log("🏁 Knowledge loading complete. AI is ready.");
+  console.log("🏁 AI Knowledge Base Ready (Optimized for Flash)");
 }
 
 /**
  * 3. AI GENERATION LOGIC
+ * Switched to gemini-1.5-flash for the fastest possible response time
  */
 export async function getChatResponse(userMessage) {
   if (!websiteKnowledge) {
-    return "I am currently loading my knowledge base. Please try again in a few seconds.";
+    return "My knowledge base is loading. Please give me a moment!";
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    // Limit context size to prevent token errors
-    const maxLength = 30000;
-    const contextData = websiteKnowledge.length > maxLength 
-      ? websiteKnowledge.substring(0, maxLength) + "..." 
-      : websiteKnowledge;
+    // ⚡ gemini-1.5-flash is optimized for low-latency
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
       You are the Vagarious Solutions AI Assistant.
       
       RULES:
-      1. Use ONLY the website knowledge provided below.
-      2. If the answer is not in the context, say: "I'm sorry, I can help only with Vagarious Solutions related information."
-      3. Be professional and concise.
-      4. ✅ STRICT LIMIT: Keep your answer under 50 words (max 3 sentences).
+      1. Use the provided website knowledge to answer.
+      2. If unknown, say: "I can only assist with information related to Vagarious Solutions."
+      3. Response style: Professional, friendly, and very concise.
+      4. Limit: Maximum 2-3 sentences.
 
       WEBSITE KNOWLEDGE:
-      ${contextData}
+      ${websiteKnowledge.substring(0, 15000)}
 
       USER QUESTION: 
       ${userMessage}
     `;
 
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-
+    return result.response.text();
   } catch (error) {
-    console.error("❌ AI Generation Error:", error);
-    return "I encountered an error processing your request.";
+    console.error("❌ AI Error:", error);
+    return "I'm having trouble responding right now. Please try again.";
   }
 }
