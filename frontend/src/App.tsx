@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 
 // Public Pages
 import Index from "./pages/Index";
@@ -17,11 +18,8 @@ import ITRecruitment from "./pages/ITRecruitment";
 import NonITRecruitment from "./pages/NonITRecruitment";
 import StaffingModels from "./pages/StaffingModels";
 
-// Utilities
-
-
 // Components
-import Chatbot from "./components/Chatbot"; // <--- 1. IMPORT CHATBOT
+import Chatbot from "./components/Chatbot";
 
 // Admin Pages
 import Login from "./pages/Login";
@@ -35,17 +33,28 @@ import AdminNonITRoles from "./pages/admin/AdminNonITRoles";
 
 const queryClient = new QueryClient();
 
+// --- SCROLL TO TOP COMPONENT ---
+// This ensures that whenever the URL changes, the window snaps to the top
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 const App: React.FC = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        {/* Ensures page scrolls to top on route change */}
-       
+        {/* Placed here to work globally for all routes */}
+        <ScrollToTop />
         
-        {/* Chatbot appears on all pages */}
-        <Chatbot />  {/* <--- 2. ADD COMPONENT HERE */}
+        <Chatbot />
         
         <Routes>
           {/* Public Routes */}
@@ -56,6 +65,8 @@ const App: React.FC = () => (
           <Route path="/employers" element={<Employers />} />
           <Route path="/candidates" element={<Candidates />} />
           <Route path="/contact" element={<Contact />} />
+          
+          {/* Specific Service Pages */}
           <Route path="/ITRecruitment" element={<ITRecruitment />} />
           <Route path="/NonITRecruitment" element={<NonITRecruitment />} />
           <Route path="/StaffingModels" element={<StaffingModels />} />
@@ -67,7 +78,6 @@ const App: React.FC = () => (
           <Route path="/admin-jobs" element={<AdminJobs />} />
           <Route path="/admin-candidates" element={<AdminCandidates />} />
           <Route path="/admin-it-recruitment" element={<AdminITRecruitment />} />
-          
           <Route path="/admin-non-it-roles" element={<AdminNonITRoles />} />
           <Route path="/admin-requirements" element={<AdminEmployerRequirements />} />
      

@@ -26,7 +26,8 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
   "https://hrms-420.netlify.app",
-  "http://localhost:8080"
+  "http://localhost:8080",
+  "https://vagarious-420.netlify.app"
 ];
 
 // Define corsOptions properly before using it

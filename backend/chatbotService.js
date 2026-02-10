@@ -6,18 +6,15 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-
 // Store Scraped Data in Memory
 let websiteKnowledge = "";
+let workingModel = null; // Cache the working model name
 
 // Helper: Delay function for Puppeteer
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * 1. PUPPETEER SCRAPER LOGIC
- * Optimized for speed and low memory usage
  */
 async function scrapeWebsite(url) {
   let browser;
@@ -33,13 +30,10 @@ async function scrapeWebsite(url) {
     console.log("🌐 Scraping:", url);
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
-    // Minimal delay for dynamic content to load
     await delay(1500);
 
     const content = await page.evaluate(() => {
-      // Remove noise to save tokens and speed up AI processing
       document.querySelectorAll("script, style, nav, footer, header, noscript, iframe, ads").forEach(el => el.remove());
-      // Clean up whitespace and newlines for faster reading
       return document.body.innerText.replace(/\s+/g, " ").trim();
     });
 
@@ -53,11 +47,79 @@ async function scrapeWebsite(url) {
 }
 
 /**
- * 2. KNOWLEDGE BASE BUILDER
+ * 2. VERIFY API KEY AND FIND WORKING MODEL
+ */
+async function findWorkingModel() {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  
+  if (!apiKey) {
+    console.error("❌ GOOGLE_API_KEY is missing from .env file");
+    console.log("📝 Get your API key from: https://aistudio.google.com/app/apikey");
+    return null;
+  }
+
+  console.log("🔍 Finding the best available model...");
+
+  try {
+    // Use native fetch to get available models
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error(`❌ API error (${response.status}):`, data.error?.message || "Unknown error");
+      console.log("📝 Get a NEW API key from: https://aistudio.google.com/app/apikey");
+      return null;
+    }
+
+    if (!data.models || data.models.length === 0) {
+      console.error("❌ No models available for this API key");
+      return null;
+    }
+
+    console.log(`✅ Found ${data.models.length} available models`);
+    
+    // Try to find the best model - updated with new Google model names
+    const modelPreferences = [
+      'gemini-2.5-flash',           // Latest and fastest
+      'gemini-flash-latest',        // Generic latest flash
+      'gemini-2.0-flash',           // Older flash
+      'gemini-2.5-pro',             // Pro version
+      'gemini-pro-latest',          // Generic latest pro
+      'gemini-1.5-flash',           // Legacy flash
+      'gemini-1.5-pro',             // Legacy pro
+      'gemini-pro'                  // Very old
+    ];
+
+    for (const pref of modelPreferences) {
+      const found = data.models.find(m => m.name.includes(pref));
+      if (found) {
+        const modelName = found.name.replace('models/', '');
+        console.log(`✅ Using model: ${modelName}`);
+        return modelName;
+      }
+    }
+
+    // If no preferred model found, use the first available one
+    const modelName = data.models[0].name.replace('models/', '');
+    console.log(`✅ Using first available model: ${modelName}`);
+    return modelName;
+
+  } catch (error) {
+    console.error("❌ Network error checking models:", error.message);
+    return null;
+  }
+}
+
+/**
+ * 3. KNOWLEDGE BASE BUILDER
  */
 export async function loadKnowledge() {
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("❌ Missing GOOGLE_API_KEY. AI disabled.");
+  // First, find a working model
+  workingModel = await findWorkingModel();
+  
+  if (!workingModel) {
+    console.error("❌ AI chatbot disabled - no valid model found");
+    console.log("📝 Please check your GOOGLE_API_KEY in the .env file");
     return;
   }
 
@@ -77,21 +139,24 @@ export async function loadKnowledge() {
   }
 
   websiteKnowledge = combinedText;
-  console.log("🏁 AI Knowledge Base Ready (Optimized for Flash)");
+  console.log("🏁 AI Knowledge Base Ready");
 }
 
 /**
- * 3. AI GENERATION LOGIC
- * Switched to gemini-1.5-flash for the fastest possible response time
+ * 4. AI GENERATION LOGIC
  */
 export async function getChatResponse(userMessage) {
+  if (!workingModel) {
+    return "AI chatbot is currently unavailable. Please check the server configuration.";
+  }
+
   if (!websiteKnowledge) {
     return "My knowledge base is loading. Please give me a moment!";
   }
 
   try {
-    // ⚡ gemini-1.5-flash is optimized for low-latency
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    const model = genAI.getGenerativeModel({ model: workingModel });
 
     const prompt = `
       You are the Vagarious Solutions AI Assistant.
@@ -111,8 +176,9 @@ export async function getChatResponse(userMessage) {
 
     const result = await model.generateContent(prompt);
     return result.response.text();
+
   } catch (error) {
-    console.error("❌ AI Error:", error);
-    return "I'm having trouble responding right now. Please try again.";
+    console.error("❌ AI Error:", error.message);
+    return "I'm having trouble responding right now. Please try again in a moment.";
   }
 }
