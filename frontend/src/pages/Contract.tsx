@@ -187,9 +187,7 @@ const Contract = () => {
         title="Flexible Talent Solutions for Dynamic Business Needs"
         description="Access specialized skills on demand with our comprehensive contract staffing solutions. Scale your team efficiently while maintaining quality and reducing overhead costs."
       >
-        <Button variant="hero" size="lg" asChild>
-          <Link to="/employers">Hire Contract Talent</Link>
-        </Button>
+       
         <Button variant="hero-outline" size="lg" asChild>
           <Link to="/contact">Get a Consultation</Link>
         </Button>

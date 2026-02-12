@@ -1,4 +1,4 @@
-// --- START OF FILE chatbotService.js ---
+// File: chatbotService.js
 
 import puppeteer from "puppeteer";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -6,11 +6,9 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-
 // Store Scraped Data in Memory
 let websiteKnowledge = "";
+let workingModel = null; // Cache the working model name
 
 // Helper: Delay function for Puppeteer
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -22,40 +20,26 @@ async function scrapeWebsite(url) {
   let browser;
   try {
     browser = await puppeteer.launch({
-      headless: true, // Set to true for production/servers
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--disable-blink-features=AutomationControlled"
-      ]
+      headless: "new", 
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     });
 
     const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 720 });
 
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    );
-
-    await page.setViewport({ width: 1366, height: 768 });
-    console.log("🌐 Opening:", url);
-
+    console.log("🌐 Scraping:", url);
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 
-    // Wait for dynamic content
-    await delay(3000);
+    await delay(1500);
 
     const content = await page.evaluate(() => {
-      // Remove non-essential elements to clean up text
-      document.querySelectorAll("script, style, nav, footer, header, noscript").forEach(el => el.remove());
+      document.querySelectorAll("script, style, nav, footer, header, noscript, iframe, ads").forEach(el => el.remove());
       return document.body.innerText.replace(/\s+/g, " ").trim();
     });
 
     return content;
-
   } catch (err) {
-    console.error(`❌ Puppeteer error on ${url}:`, err.message);
+    console.error(`❌ Scraper error on ${url}:`, err.message);
     return "";
   } finally {
     if (browser) await browser.close();
@@ -63,15 +47,81 @@ async function scrapeWebsite(url) {
 }
 
 /**
- * 2. KNOWLEDGE BASE BUILDER
+ * 2. VERIFY API KEY AND FIND WORKING MODEL
  */
-export async function loadKnowledge() {
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("❌ Missing GOOGLE_API_KEY in .env file. Chatbot will not work.");
-    return;
+async function findWorkingModel() {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  
+  if (!apiKey) {
+    console.error("❌ GOOGLE_API_KEY is missing from .env file");
+    console.log("📝 Get your API key from: https://aistudio.google.com/app/apikey");
+    return null;
   }
 
-  console.log("🔄 Starting knowledge base update...");
+  console.log("🔍 Finding the best available model...");
+
+  try {
+    // Use native fetch to get available models
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error(`❌ API error (${response.status}):`, data.error?.message || "Unknown error");
+      console.log("📝 Get a NEW API key from: https://aistudio.google.com/app/apikey");
+      return null;
+    }
+
+    if (!data.models || data.models.length === 0) {
+      console.error("❌ No models available for this API key");
+      return null;
+    }
+
+    console.log(`✅ Found ${data.models.length} available models`);
+    
+    // Try to find the best model - updated with new Google model names
+    const modelPreferences = [
+      'gemini-2.5-flash',           // Latest and fastest
+      'gemini-flash-latest',        // Generic latest flash
+      'gemini-2.0-flash',           // Older flash
+      'gemini-2.5-pro',             // Pro version
+      'gemini-pro-latest',          // Generic latest pro
+      'gemini-1.5-flash',           // Legacy flash
+      'gemini-1.5-pro',             // Legacy pro
+      'gemini-pro'                  // Very old
+    ];
+
+    for (const pref of modelPreferences) {
+      const found = data.models.find(m => m.name.includes(pref));
+      if (found) {
+        const modelName = found.name.replace('models/', '');
+        console.log(`✅ Using model: ${modelName}`);
+        return modelName;
+      }
+    }
+
+    // If no preferred model found, use the first available one
+    const modelName = data.models[0].name.replace('models/', '');
+    console.log(`✅ Using first available model: ${modelName}`);
+    return modelName;
+
+  } catch (error) {
+    console.error("❌ Network error checking models:", error.message);
+    return null;
+  }
+}
+
+/**
+ * 3. KNOWLEDGE BASE BUILDER
+ */
+export async function loadKnowledge() {
+  // First, find a working model
+  workingModel = await findWorkingModel();
+  
+  if (!workingModel) {
+    console.error("❌ AI chatbot disabled - no valid model found");
+    console.log("📝 Please check your GOOGLE_API_KEY in the .env file");
+    return;
+  }
 
   const urls = [
     "https://www.vagarioussolutions.com",
@@ -81,64 +131,54 @@ export async function loadKnowledge() {
   ];
 
   let combinedText = "";
-
   for (const url of urls) {
-    try {
-      const text = await scrapeWebsite(url);
-      if (!text || text.length < 200) {
-        console.log("❌ Skipped (No content):", url);
-        continue;
-      }
-      combinedText += `\n\nCONTENT FROM ${url}:\n${text}`;
-      console.log("✅ Loaded:", url);
-    } catch (err) {
-      console.log("❌ Failed to load:", url);
+    const text = await scrapeWebsite(url);
+    if (text && text.length > 100) {
+      combinedText += `\n\n[Source: ${url}]\n${text}`;
     }
   }
 
   websiteKnowledge = combinedText;
-  console.log("🏁 Knowledge loading complete. AI is ready.");
+  console.log("🏁 AI Knowledge Base Ready");
 }
 
 /**
- * 3. AI GENERATION LOGIC
+ * 4. AI GENERATION LOGIC
  */
 export async function getChatResponse(userMessage) {
+  if (!workingModel) {
+    return "AI chatbot is currently unavailable. Please check the server configuration.";
+  }
+
   if (!websiteKnowledge) {
-    return "I am currently loading my knowledge base. Please try again in a few seconds.";
+    return "My knowledge base is loading. Please give me a moment!";
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    // Limit context size to prevent token errors
-    const maxLength = 30000;
-    const contextData = websiteKnowledge.length > maxLength 
-      ? websiteKnowledge.substring(0, maxLength) + "..." 
-      : websiteKnowledge;
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    const model = genAI.getGenerativeModel({ model: workingModel });
 
     const prompt = `
       You are the Vagarious Solutions AI Assistant.
       
       RULES:
-      1. Use ONLY the website knowledge provided below.
-      2. If the answer is not in the context, say: "I'm sorry, I can help only with Vagarious Solutions related information."
-      3. Be professional and concise.
-      4. ✅ STRICT LIMIT: Keep your answer under 50 words (max 3 sentences).
+      1. Use the provided website knowledge to answer.
+      2. If unknown, say: "I can only assist with information related to Vagarious Solutions."
+      3. Response style: Professional, friendly, and very concise.
+      4. Limit: Maximum 2-3 sentences.
 
       WEBSITE KNOWLEDGE:
-      ${contextData}
+      ${websiteKnowledge.substring(0, 15000)}
 
       USER QUESTION: 
       ${userMessage}
     `;
 
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    return result.response.text();
 
   } catch (error) {
-    console.error("❌ AI Generation Error:", error);
-    return "I encountered an error processing your request.";
+    console.error("❌ AI Error:", error.message);
+    return "I'm having trouble responding right now. Please try again in a moment.";
   }
 }

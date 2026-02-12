@@ -18,7 +18,7 @@ import {
   ShoppingBag,
   Headphones,
   Send,
-  Loader2 // Imported for loading state
+  Loader2 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,55 +30,34 @@ import { SectionHeading } from "@/components/shared/SectionHeading";
 import { useToast } from "@/hooks/use-toast";
 import heroEmployers from "@/assets/hero-employers.jpg";
 
+// --- Types ---
+interface FormData {
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  requirements: string;
+  positions: string;
+  location: string;
+}
+
+interface FormErrors {
+  [key: string]: string;
+}
+
 const whyChoose = [
-  {
-    icon: Target,
-    title: "Industry Expertise",
-    description: "Strong understanding of both IT and Non-IT hiring landscapes enables accurate role-to-talent alignment.",
-  },
-  {
-    icon: Zap,
-    title: "Efficient Hiring Timelines",
-    description: "Optimized recruitment workflows support faster closures without compromising candidate quality.",
-  },
-  {
-    icon: Shield,
-    title: "Quality Assurance",
-    description: "Replacement support ensures hiring outcomes meet defined expectations.",
-  },
-  {
-    icon: Clock,
-    title: "Dedicated Client Support",
-    description: "A single, experienced point of contact manages the recruitment lifecycle end to end.",
-  },
-  {
-    icon: Award,
-    title: "Cost Transparency",
-    description: "Competitive and clearly defined pricing models with no hidden charges.",
-  },
-  {
-    icon: Users,
-    title: "Extensive Talent Network",
-    description: "Access to a large, pre-screened talent pool across multiple industries and locations in India.",
-  },
+  { icon: Target, title: "Industry Expertise", description: "Strong understanding of both IT and Non-IT hiring landscapes enables accurate role-to-talent alignment." },
+  { icon: Zap, title: "Efficient Hiring Timelines", description: "Optimized recruitment workflows support faster closures without compromising candidate quality." },
+  { icon: Shield, title: "Quality Assurance", description: "Replacement support ensures hiring outcomes meet defined expectations." },
+  { icon: Clock, title: "Dedicated Client Support", description: "A single, experienced point of contact manages the recruitment lifecycle end to end." },
+  { icon: Award, title: "Cost Transparency", description: "Competitive and clearly defined pricing models with no hidden charges." },
+  { icon: Users, title: "Extensive Talent Network", description: "Access to a large, pre-screened talent pool across multiple industries and locations in India." },
 ];
 
 const engagementModels = [
-  {
-    title: "Contingency Hiring",
-    description: "Outcome-based recruitment with payment upon successful hire.",
-    features: ["No upfront fees", "Minimal risk", "Suitable for multiple open positions"],
-  },
-  {
-    title: "Retained Search",
-    description: "Dedicated search for senior leadership and critical roles.",
-    features: ["Exclusive engagement", "Comprehensive market mapping", "Executive-level expertise"],
-  },
-  {
-    title: "RPO Services",
-    description: "End-to-end recruitment process management for high-volume or ongoing hiring needs.",
-    features: ["Dedicated recruitment teams", "Full lifecycle ownership", "Scalable and cost-efficient"],
-  },
+  { title: "Contingency Hiring", description: "Outcome-based recruitment with payment upon successful hire.", features: ["No upfront fees", "Minimal risk", "Suitable for multiple open positions"] },
+  { title: "Retained Search", description: "Dedicated search for senior leadership and critical roles.", features: ["Exclusive engagement", "Comprehensive market mapping", "Executive-level expertise"] },
+  { title: "RPO Services", description: "End-to-end recruitment process management for high-volume or ongoing hiring needs.", features: ["Dedicated recruitment teams", "Full lifecycle ownership", "Scalable and cost-efficient"] },
 ];
 
 const industries = [
@@ -102,11 +81,11 @@ const hiringProcess = [
 const Employers = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
   
-  // Access the API URL from .env
   const API_URL = import.meta.env.VITE_API_URL;
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     companyName: "",
     contactPerson: "",
     email: "",
@@ -116,22 +95,61 @@ const Employers = () => {
     location: "",
   });
 
+  // --- Strict Submission Validation ---
+  const validate = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!formData.companyName || formData.companyName.trim().length < 2) {
+      newErrors.companyName = "Valid company name is required.";
+    }
+    if (!formData.contactPerson || formData.contactPerson.trim().length < 2) {
+      newErrors.contactPerson = "Contact person name is required.";
+    }
+    
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!formData.email || !emailRegex.test(formData.email)) {
+      newErrors.email = "Please enter a valid professional email address.";
+    }
+
+    if (formData.phone.length !== 10) {
+      newErrors.phone = "Phone number must be exactly 10 digits.";
+    }
+
+    if (!formData.requirements || formData.requirements.trim().length < 20) {
+      newErrors.requirements = "Please provide more detail (min 20 characters).";
+    }
+
+    if (!formData.location || formData.location.trim().length < 2) {
+      newErrors.location = "Job location is required.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validate()) {
+      toast({
+        title: "Validation Error",
+        description: "Please correct the highlighted errors.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Send POST request to backend
       const response = await axios.post(`${API_URL}/employer-requirements`, formData);
 
       if (response.data.success) {
         toast({
           title: "Requirement Submitted Successfully!",
           description: "Our recruitment team will contact you within 24 hours.",
-          variant: "default", // You can use "success" if defined in your theme
         });
 
-        // Reset form
         setFormData({
           companyName: "",
           contactPerson: "",
@@ -141,9 +159,9 @@ const Employers = () => {
           positions: "",
           location: "",
         });
+        setErrors({});
       }
     } catch (error: any) {
-      console.error("Submission Error:", error);
       toast({
         title: "Submission Failed",
         description: error.response?.data?.message || "Something went wrong. Please try again.",
@@ -155,7 +173,31 @@ const Employers = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let filteredValue = value;
+
+    // --- STRICT INPUT FILTERING ---
+    // 1. Prevent numbers in Name, Location, and Company Name
+    if (["contactPerson", "location", "companyName"].includes(name)) {
+      filteredValue = value.replace(/[0-9]/g, ""); 
+    }
+
+    // 2. Prevent letters/symbols in Phone and Positions
+    if (["phone", "positions"].includes(name)) {
+      filteredValue = value.replace(/\D/g, ""); // Allow only digits
+      if (name === "phone") filteredValue = filteredValue.slice(0, 10); // Limit phone to 10
+    }
+
+    setFormData(prev => ({ ...prev, [name]: filteredValue }));
+
+    // Clear error message when user starts correcting the field
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrs = { ...prev };
+        delete newErrs[name];
+        return newErrs;
+      });
+    }
   };
 
   return (
@@ -340,106 +382,108 @@ const Employers = () => {
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="glass-card p-8"
+              className="glass-card p-8 bg-white dark:bg-slate-950 border border-border shadow-2xl"
             >
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="companyName">Company Name *</Label>
+                    <Label htmlFor="companyName" className={errors.companyName ? "text-destructive" : ""}>Company Name (Text only) *</Label>
                     <Input
                       id="companyName"
                       name="companyName"
                       value={formData.companyName}
                       onChange={handleChange}
-                      required
-                      placeholder="Your company name"
+                      placeholder="Your company"
+                      className={errors.companyName ? "border-destructive focus-visible:ring-destructive" : ""}
                     />
+                    {errors.companyName && <p className="text-[10px] text-destructive mt-1">{errors.companyName}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contactPerson">Contact Person *</Label>
+                    <Label htmlFor="contactPerson" className={errors.contactPerson ? "text-destructive" : ""}>Contact Person (Text only) *</Label>
                     <Input
                       id="contactPerson"
                       name="contactPerson"
                       value={formData.contactPerson}
                       onChange={handleChange}
-                      required
                       placeholder="Your name"
+                      className={errors.contactPerson ? "border-destructive focus-visible:ring-destructive" : ""}
                     />
+                    {errors.contactPerson && <p className="text-[10px] text-destructive mt-1">{errors.contactPerson}</p>}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
+                    <Label htmlFor="email" className={errors.email ? "text-destructive" : ""}>Business Email *</Label>
                     <Input
                       id="email"
                       name="email"
                       type="email"
                       value={formData.email}
                       onChange={handleChange}
-                      required
-                      placeholder="email@company.com"
+                      placeholder="hr@company.com"
+                      className={errors.email ? "border-destructive focus-visible:ring-destructive" : ""}
                     />
+                    {errors.email && <p className="text-[10px] text-destructive mt-1">{errors.email}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Label htmlFor="phone" className={errors.phone ? "text-destructive" : ""}>Phone (10 Digits only) *</Label>
                     <Input
                       id="phone"
                       name="phone"
-                      type="tel"
                       value={formData.phone}
                       onChange={handleChange}
-                      required
-                      placeholder="+91 98765 43210"
+                      placeholder="9876543210"
+                      className={errors.phone ? "border-destructive focus-visible:ring-destructive" : ""}
                     />
+                    {errors.phone && <p className="text-[10px] text-destructive mt-1">{errors.phone}</p>}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="positions">Number of Positions</Label>
+                    <Label htmlFor="positions">No. of Positions (Numbers only)</Label>
                     <Input
                       id="positions"
                       name="positions"
                       value={formData.positions}
                       onChange={handleChange}
-                      placeholder="e.g., 5"
+                      placeholder="e.g. 10"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="location">Job Location</Label>
+                    <Label htmlFor="location" className={errors.location ? "text-destructive" : ""}>Job Location (Text only) *</Label>
                     <Input
                       id="location"
                       name="location"
                       value={formData.location}
                       onChange={handleChange}
-                      placeholder="e.g., Bangalore"
+                      placeholder="e.g. Hyderabad"
+                      className={errors.location ? "border-destructive focus-visible:ring-destructive" : ""}
                     />
+                    {errors.location && <p className="text-[10px] text-destructive mt-1">{errors.location}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="requirements">Job Requirements *</Label>
+                  <Label htmlFor="requirements" className={errors.requirements ? "text-destructive" : ""}>Job Requirements (Min 20 characters) *</Label>
                   <Textarea
                     id="requirements"
                     name="requirements"
                     value={formData.requirements}
                     onChange={handleChange}
-                    required
-                    placeholder="Please describe the role, required skills, experience level, and any other relevant details..."
-                    rows={5}
+                    placeholder="Describe roles, skills, experience..."
+                    rows={4}
+                    className={errors.requirements ? "border-destructive focus-visible:ring-destructive" : ""}
                   />
+                  {errors.requirements && <p className="text-[10px] text-destructive mt-1">{errors.requirements}</p>}
                 </div>
 
-                <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                <Button type="submit" size="lg" className="w-full font-bold" disabled={loading}>
                   {loading ? (
-                    <>
-                      Submitting... <Loader2 className="w-5 h-5 ml-2 animate-spin" />
-                    </>
+                    <>Submitting... <Loader2 className="w-5 h-5 ml-2 animate-spin" /></>
                   ) : (
-                    <>
-                      Submit Requirement <Send className="w-5 h-5 ml-2" />
-                    </>
+                    <>Submit Requirement <Send className="w-5 h-5 ml-2" /></>
                   )}
                 </Button>
               </form>

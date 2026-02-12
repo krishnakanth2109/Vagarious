@@ -22,7 +22,11 @@ const Login = () => {
   
   const [showPassword, setShowPassword] = useState(false);
   const appName = import.meta.env.VITE_APP_NAME || "VGS Admin Portal";
-  const API_URL = "http://localhost:5000/api/auth"; // Update with your actual backend URL
+
+  // ✅ DYNAMIC URL CONFIGURATION
+  // If .env is missing, fallback to localhost
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  const AUTH_URL = `${API_BASE}/auth`; 
 
   // --- 1. HANDLE LOGIN ---
   const handleLogin = async (e: React.FormEvent) => {
@@ -30,7 +34,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/login`, {
+      const res = await fetch(`${AUTH_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -45,7 +49,8 @@ const Login = () => {
         toast.error(data.message || "Login failed");
       }
     } catch (error) {
-      toast.error("Network error. Please try again.");
+      console.error("Login Error:", error);
+      toast.error("Network error. Please check your connection.");
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +62,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/forgot-password`, {
+      const res = await fetch(`${AUTH_URL}/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -83,7 +88,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/reset-password`, {
+      const res = await fetch(`${AUTH_URL}/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp, newPassword }),
@@ -109,7 +114,7 @@ const Login = () => {
   return (
     <div className="flex min-h-screen w-full overflow-hidden bg-slate-50">
       
-      {/* LEFT SIDE - BRANDING (Same as before) */}
+      {/* LEFT SIDE - BRANDING */}
       <div className="relative hidden w-1/2 lg:flex flex-col justify-between p-12 bg-slate-900 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img 

@@ -288,8 +288,8 @@ const Candidates = () => {
         <div className="container-custom">
           <div className="grid lg:grid-cols-2 gap-12">
             <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-              <p className="text-sm font-semibold uppercase tracking-wider text-primary mb-3">Get Started</p>
-              <h2 className="text-3xl md:text-4xl font-bold font-heading mb-6">Upload Your Resume</h2>
+           
+              <h2 className="text-3xl md:text-4xl font-bold font-heading mb-6">Get Started</h2>
               <p className="text-muted-foreground mb-8">Register with us to access exclusive job opportunities.</p>
               <div className="space-y-4">
                 {benefits.map((item, i) => (

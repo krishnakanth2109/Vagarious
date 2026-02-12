@@ -186,12 +186,7 @@ const StaffingModels = () => {
         title="Flexible Workforce Solutions"
         description="Choose from our comprehensive range of staffing models designed to meet your specific business needs, budget constraints, and growth objectives."
       >
-        <Button variant="hero" size="lg" asChild>
-          <Link to="/employers">Choose Your Model</Link>
-        </Button>
-        <Button variant="hero-outline" size="lg" asChild>
-          <Link to="/contact">Get Model Recommendation</Link>
-        </Button>
+    
       </HeroBanner>
 
       {/* Staffing Models */}
@@ -352,9 +347,7 @@ const StaffingModels = () => {
                   Get Personalized Recommendation <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" className="text-secondary-foreground border-secondary-foreground/30" asChild>
-                <Link to="/employers">Compare Models</Link>
-              </Button>
+            
             </div>
           </motion.div>
         </div>
