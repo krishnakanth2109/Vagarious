@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   ArrowRight, Search, MapPin, Briefcase, Clock, Upload,
-  CheckCircle2, FileText, Users, TrendingUp, Award
+  CheckCircle2, FileText, Users, TrendingUp, Award, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,18 @@ import {
 } from "@/components/ui/accordion";
 import heroCandidates from "@/assets/hero-candidates.jpg";
 import axios from "axios";
-console.log("Current API URL:", import.meta.env.VITE_API_URL);
-// Static Data
+
+// --- TYPES ---
+interface FormErrors {
+  [key: string]: string;
+}
+
+// ---------------------------------------------------------
+// API CONFIGURATION (Uses VITE_API_URL from .env)
+// ---------------------------------------------------------
+const API_URL = import.meta.env.VITE_API_URL;
+console.log("Active API Endpoint:", API_URL);
+
 const applicationProcess = [
   { icon: FileText, title: "Submit Resume", description: "Upload your updated resume through our portal or send via email." },
   { icon: Users, title: "Initial Screening", description: "Our recruiters review your profile and assess fit for available positions." },
@@ -32,8 +42,6 @@ const faqs = [
   { question: "How long does the placement process take?", answer: "Typically 2-4 weeks from profile submission to offer." },
   { question: "Will my resume be shared without my consent?", answer: "No. We seek consent before sharing your profile." },
   { question: "What types of jobs do you offer?", answer: "Opportunities across IT and Non-IT sectors." },
-  { question: "Can I apply for multiple positions?", answer: "Yes, you can express interest in multiple positions." },
-  { question: "Do you provide career counseling?", answer: "Yes, guidance on resumes and interviews is provided." },
 ];
 
 const benefits = [
@@ -42,22 +50,14 @@ const benefits = [
   "Career counseling", "100% confidential process",
 ];
 
-// ---------------------------------------------------------
-// IMPORT API URL FROM .ENV
-// ---------------------------------------------------------
-// This will use 'https://vagarious.onrender.com/api' from your screenshot
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
 const Candidates = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(true);
-  
-  // State for Form Submission Loading
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
 
-  // Contact Form State
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -74,73 +74,114 @@ const Candidates = () => {
   // Fetch Jobs from Backend
   useEffect(() => {
     const fetchJobs = async () => {
+      if (!API_URL) return;
       try {
-        // GET request to /api/jobs
         const response = await axios.get(`${API_URL}/jobs`);
         setJobs(response.data);
       } catch (error) {
         console.error("Failed to fetch jobs:", error);
-        toast({
-          title: "Connection Error",
-          description: "Could not load jobs. Please check your connection.",
-          variant: "destructive",
-        });
       } finally {
         setJobsLoading(false);
       }
     };
     fetchJobs();
-  }, [toast]);
+  }, []);
 
-  // Handle Form Change
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // --- Strict Validation Rules ---
+  const validate = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (formData.name.trim().length < 2) 
+      newErrors.name = "Full name is required (text only).";
+    
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(formData.email)) 
+      newErrors.email = "Please enter a valid business/personal email.";
+
+    if (formData.phone.length !== 10) 
+      newErrors.phone = "Phone number must be exactly 10 digits.";
+
+    if (formData.experience.trim().length === 0) 
+      newErrors.experience = "Experience details are required.";
+
+    if (formData.skills.trim().length < 5) 
+      newErrors.skills = "Please list your primary skills (min 5 chars).";
+
+    if (formData.preferredLocation.trim().length < 2) 
+      newErrors.preferredLocation = "Enter a location (text only).";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  // Handle Form Submit
+  // --- Handle Real-time Strict Input Filtering ---
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    let filteredValue = value;
+
+    // 1. STRICT: Block numbers in Name and Location
+    if (name === "name" || name === "preferredLocation") {
+      filteredValue = value.replace(/[0-9]/g, ""); 
+    }
+
+    // 2. STRICT: Allow only digits for Phone
+    if (name === "phone") {
+      filteredValue = value.replace(/\D/g, "").slice(0, 10);
+    }
+
+    // 3. STRICT: Allow only numbers/experience symbols for Exp
+    if (name === "experience") {
+      filteredValue = value.replace(/[^0-9.+-]/g, "");
+    }
+
+    setFormData(prev => ({ ...prev, [name]: filteredValue }));
+
+    // Clear error for field as user types
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrs = { ...prev };
+        delete newErrs[name];
+        return newErrs;
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) {
+      toast({ 
+        title: "Validation Error", 
+        description: "Please check the red highlighted fields.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setIsSubmitting(true);
-
     try {
-      // POST request to /api/candidates
       await axios.post(`${API_URL}/candidates`, formData);
-
-      toast({
-        title: "Profile Submitted!",
-        description: "Our recruitment team will review your profile and contact you soon.",
+      toast({ 
+        title: "Profile Submitted!", 
+        description: "We will review your profile and contact you shortly." 
       });
-
-      // Reset Form
-      setFormData({
-        name: "", email: "", phone: "", experience: "",
-        currentCompany: "", currentRole: "", skills: "",
-        preferredLocation: "", noticePeriod: "", message: "",
-      });
+      setFormData({ name: "", email: "", phone: "", experience: "", currentCompany: "", currentRole: "", skills: "", preferredLocation: "", noticePeriod: "", message: "" });
+      setErrors({});
     } catch (error) {
-      console.error("Submission error:", error);
-      toast({
-        title: "Submission Failed",
-        description: "There was an error saving your profile. Please try again.",
-        variant: "destructive"
+      toast({ 
+        title: "Submission Failed", 
+        description: "Network error. Please try again later.", 
+        variant: "destructive" 
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Filter Jobs
   const filteredJobs = jobs.filter(
     (job: any) =>
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.skills.some((skill: string) => skill.toLowerCase().includes(searchTerm.toLowerCase())) ||
       job.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
 
   return (
     <Layout>
@@ -148,149 +189,59 @@ const Candidates = () => {
         image={heroCandidates}
         subtitle="For Job Seekers"
         title="Your Next Career Move Starts Here"
-        description="Explore exciting opportunities with top companies. Let our experienced recruiters help you find the perfect role."
+        description="Explore exciting opportunities with top companies across IT and Non-IT sectors."
       >
-        <Button variant="hero" size="lg" asChild>
-          <a href="#register">Upload Resume</a>
-        </Button>
-        <Button variant="hero-outline" size="lg" asChild>
-          <a href="#jobs">View Jobs</a>
-        </Button>
+        <Button variant="hero" size="lg" asChild><a href="#register">Upload Resume</a></Button>
+        <Button variant="hero-outline" size="lg" asChild><a href="#jobs">View Jobs</a></Button>
       </HeroBanner>
 
-      {/* Current Openings */}
+      {/* Jobs Search */}
       <section id="jobs" className="section-padding scroll-mt-24">
         <div className="container-custom">
-          <SectionHeading
-            subtitle="Current Openings"
-            title="Featured Job Opportunities"
-            description="Explore our latest job openings across IT and Non-IT sectors."
-          />
-
-          {/* Search */}
-          <div className="mb-8">
-            <div className="relative max-w-xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search by job title, skills, or location..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-12 rounded-xl"
-              />
-            </div>
+          <SectionHeading subtitle="Current Openings" title="Featured Job Opportunities" />
+          
+          <div className="mb-8 relative max-w-xl mx-auto">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Search by job title or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 h-12 rounded-xl"
+            />
           </div>
 
           {jobsLoading ? (
-            <div className="text-center py-20 text-muted-foreground">
-              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-              Loading job opportunities...
-            </div>
+            <div className="text-center py-10"><Loader2 className="animate-spin mx-auto w-8 h-8 text-primary" /></div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredJobs.length === 0 ? (
-                <div className="col-span-full text-center py-10 text-muted-foreground bg-muted/30 rounded-xl border border-dashed">
-                  No jobs found matching your criteria. Try adjusting your search.
-                </div>
+                <div className="col-span-full text-center py-10 text-muted-foreground">No jobs found.</div>
               ) : (
                 filteredJobs.map((job: any, index) => (
-                  <motion.div
-                    key={job._id || index}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
-                    className="glass-card-hover p-6 flex flex-col justify-between h-full"
-                  >
+                  <motion.div key={job._id || index} className="glass-card-hover p-6 flex flex-col justify-between border border-border">
                     <div>
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-lg font-bold font-heading line-clamp-1">{job.title}</h3>
-                          <p className="text-muted-foreground text-sm font-medium">{job.company}</p>
-                        </div>
-                        <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full whitespace-nowrap">
-                          {job.type}
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2 mb-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 shrink-0" /> {job.location}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="w-4 h-4 shrink-0" /> {job.experience}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 shrink-0" /> Posted {formatDate(job.postedAt)}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {job.skills.slice(0, 4).map((skill: string, i: number) => (
-                          <span key={i} className="text-xs bg-muted px-2 py-1 rounded-md">{skill}</span>
-                        ))}
+                      <h3 className="text-lg font-bold font-heading">{job.title}</h3>
+                      <p className="text-muted-foreground text-sm mb-4">{job.company}</p>
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {job.location}</div>
+                        <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> {job.experience}</div>
                       </div>
                     </div>
-
-                    <Button variant="outline" className="w-full mt-auto" asChild>
-                      <a href="#register">Apply Now <ArrowRight className="w-4 h-4" /></a>
-                    </Button>
+                    <Button variant="outline" className="w-full mt-4" asChild><a href="#register">Apply Now</a></Button>
                   </motion.div>
                 ))
               )}
             </div>
           )}
-          
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mt-8">
-            <p className="text-muted-foreground mb-4">Don't see a suitable position? Register with us.</p>
-            <Button asChild><a href="#register">Register for Job Alerts</a></Button>
-          </motion.div>
         </div>
       </section>
 
-      {/* Application Process Section */}
-      <section className="section-padding bg-muted/50">
-        <div className="container-custom">
-          <SectionHeading
-            subtitle="How It Works"
-            title="Your Journey to Success"
-            description="Our streamlined process makes job hunting easy and stress-free."
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {applicationProcess.map((step, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="text-center relative"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-sky-dark mx-auto mb-4 flex items-center justify-center">
-                  <step.icon className="w-8 h-8 text-primary-foreground" />
-                </div>
-                <h3 className="font-bold font-heading mb-2">{step.title}</h3>
-                <p className="text-sm text-muted-foreground">{step.description}</p>
-                {index < applicationProcess.length - 1 && (
-                  <div className="hidden lg:block absolute top-8 left-full w-full">
-                    <ArrowRight className="w-6 h-6 text-primary/30 mx-auto" />
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Register Form */}
-      <section id="register" className="section-padding scroll-mt-24">
+      {/* Profile Submission Form */}
+      <section id="register" className="section-padding scroll-mt-24 bg-muted/30">
         <div className="container-custom">
           <div className="grid lg:grid-cols-2 gap-12">
-            <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-           
-              <h2 className="text-3xl md:text-4xl font-bold font-heading mb-6">Get Started</h2>
-              <p className="text-muted-foreground mb-8">Register with us to access exclusive job opportunities.</p>
+            <div>
+              <h2 className="text-3xl font-bold font-heading mb-6">Upload Your Profile</h2>
               <div className="space-y-4">
                 {benefits.map((item, i) => (
                   <div key={i} className="flex items-center gap-3">
@@ -298,66 +249,61 @@ const Candidates = () => {
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="glass-card p-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <motion.div className="glass-card p-8 bg-white dark:bg-slate-950 shadow-2xl border border-border">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input id="name" name="name" value={formData.name} onChange={handleChange} required placeholder="Your full name" />
+                  <div className="space-y-1">
+                    <Label className={errors.name ? "text-destructive" : ""}>Full Name (Text only) *</Label>
+                    <Input name="name" value={formData.name} onChange={handleChange} placeholder="Full Name" className={errors.name ? "border-destructive" : ""} />
+                    {errors.name && <p className="text-[10px] text-destructive">{errors.name}</p>}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
-                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required placeholder="email@example.com" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleChange} required placeholder="+91 98765 43210" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="experience">Total Experience *</Label>
-                    <Input id="experience" name="experience" value={formData.experience} onChange={handleChange} required placeholder="e.g., 5 years" />
+                  <div className="space-y-1">
+                    <Label className={errors.email ? "text-destructive" : ""}>Email Address *</Label>
+                    <Input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="email@example.com" className={errors.email ? "border-destructive" : ""} />
+                    {errors.email && <p className="text-[10px] text-destructive">{errors.email}</p>}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="currentCompany">Current Company</Label>
-                    <Input id="currentCompany" name="currentCompany" value={formData.currentCompany} onChange={handleChange} placeholder="Company name" />
+                  <div className="space-y-1">
+                    <Label className={errors.phone ? "text-destructive" : ""}>Phone (10 digits) *</Label>
+                    <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="10 Digit Number" className={errors.phone ? "border-destructive" : ""} />
+                    {errors.phone && <p className="text-[10px] text-destructive">{errors.phone}</p>}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="currentRole">Current Role</Label>
-                    <Input id="currentRole" name="currentRole" value={formData.currentRole} onChange={handleChange} placeholder="Your designation" />
+                  <div className="space-y-1">
+                    <Label className={errors.experience ? "text-destructive" : ""}>Experience (e.g. 2+) *</Label>
+                    <Input name="experience" value={formData.experience} onChange={handleChange} placeholder="Years" className={errors.experience ? "border-destructive" : ""} />
+                    {errors.experience && <p className="text-[10px] text-destructive">{errors.experience}</p>}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="skills">Key Skills *</Label>
-                  <Input id="skills" name="skills" value={formData.skills} onChange={handleChange} required placeholder="e.g., React, Node.js, AWS" />
+                <div className="space-y-1">
+                  <Label className={errors.skills ? "text-destructive" : ""}>Key Skills *</Label>
+                  <Input name="skills" value={formData.skills} onChange={handleChange} placeholder="React, Node.js, etc." className={errors.skills ? "border-destructive" : ""} />
+                  {errors.skills && <p className="text-[10px] text-destructive">{errors.skills}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="preferredLocation">Preferred Location</Label>
-                    <Input id="preferredLocation" name="preferredLocation" value={formData.preferredLocation} onChange={handleChange} placeholder="e.g., Bangalore, Mumbai" />
+                  <div className="space-y-1">
+                    <Label className={errors.preferredLocation ? "text-destructive" : ""}>Preferred Location (Text only) *</Label>
+                    <Input name="preferredLocation" value={formData.preferredLocation} onChange={handleChange} placeholder="e.g. Hyderabad" className={errors.preferredLocation ? "border-destructive" : ""} />
+                    {errors.preferredLocation && <p className="text-[10px] text-destructive">{errors.preferredLocation}</p>}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="noticePeriod">Notice Period</Label>
-                    <Input id="noticePeriod" name="noticePeriod" value={formData.noticePeriod} onChange={handleChange} placeholder="e.g., 30 days" />
+                  <div className="space-y-1">
+                    <Label>Notice Period</Label>
+                    <Input name="noticePeriod" value={formData.noticePeriod} onChange={handleChange} placeholder="e.g. 30 days" />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="message">Additional Information</Label>
-                  <Textarea id="message" name="message" value={formData.message} onChange={handleChange} placeholder="Any additional details..." rows={3} />
+                <div className="space-y-1">
+                  <Label>Additional Info</Label>
+                  <Textarea name="message" value={formData.message} onChange={handleChange} placeholder="Anything else..." rows={2} />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? <span className="flex items-center gap-2"><div className="animate-spin w-4 h-4 border-2 border-white/50 border-t-white rounded-full" /> Sending...</span> : <><Upload className="w-5 h-5 mr-2" /> Submit Profile</>}
+                <Button type="submit" size="lg" className="w-full font-bold" disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader2 className="animate-spin mr-2" /> Submitting</> : "Submit Profile"}
                 </Button>
               </form>
             </motion.div>
@@ -365,15 +311,15 @@ const Candidates = () => {
         </div>
       </section>
 
-      {/* FAQs Section */}
+      {/* FAQs */}
       <section className="section-padding bg-muted/50">
         <div className="container-custom">
-          <SectionHeading subtitle="FAQs" title="Frequently Asked Questions" description="Find answers to common questions." />
+          <SectionHeading subtitle="FAQs" title="Frequently Asked Questions" />
           <div className="max-w-3xl mx-auto">
             <Accordion type="single" collapsible className="space-y-4">
               {faqs.map((faq, index) => (
                 <AccordionItem key={index} value={`item-${index}`} className="glass-card px-6 border-none">
-                  <AccordionTrigger className="text-left hover:no-underline"><span className="font-semibold">{faq.question}</span></AccordionTrigger>
+                  <AccordionTrigger className="text-left hover:no-underline font-semibold">{faq.question}</AccordionTrigger>
                   <AccordionContent className="text-muted-foreground">{faq.answer}</AccordionContent>
                 </AccordionItem>
               ))}

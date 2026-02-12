@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 // Import Chatbot Service
+// Note: Ensure chatbotService.js exists in the same directory
 import { loadKnowledge, getChatResponse } from "./chatbotService.js";
 
 // Import Routes
@@ -36,7 +37,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow requests with no origin (Postman, mobile apps)
+    // allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
@@ -65,12 +66,14 @@ const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
-    // Do not crash the app if DB fails, so Chatbot can still work in offline mode if designed to
-    console.warn("Continuing without DB connection...");
+    // We throw the error here so the .catch() block at the bottom handles the offline mode logic
+    throw error; 
   }
 };
 
 // --- API ROUTES ---
+// These define the URL paths. 
+// Example: chatRoutes will be available at http://localhost:5000/api/chat
 app.use("/api/jobs", jobRoutes);
 app.use("/api/candidates", candidateRoutes);
 app.use("/api/it-recruitment", itRecruitmentRoutes);
@@ -99,18 +102,21 @@ connectDB().then(() => {
     console.log(`Server running on port ${PORT}`);
 
     // Initialize Chatbot Knowledge Base after server starts
-    // We catch potential errors here to not crash the server if loading fails
     try {
-      await loadKnowledge();
+      // Assuming loadKnowledge is an async function from your chatbotService
+      if (typeof loadKnowledge === 'function') {
+          await loadKnowledge();
+          console.log("Chatbot Knowledge Base Loaded.");
+      }
     } catch (err) {
       console.error("Knowledge load failed:", err);
     }
   });
 }).catch((err) => {
-  // This catch block handles errors from connectDB itself if it were to throw (it catches internally though)
   console.error("Failed to connect to DB:", err.message);
-  console.log("Starting server in Offline Mode...");
+  console.log("Starting server in Offline Mode (Database features will be unavailable)...");
+  
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT} (Offline Mode)`);
   });
 });

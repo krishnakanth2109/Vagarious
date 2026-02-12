@@ -21,8 +21,18 @@ export const Chatbot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Use environment variable for API URL if available, fallback to localhost:5000
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  // --- FIX: Normalize API URL ---
+  // This logic ensures we don't end up with /api/api/chat even if .env has /api included
+  const getBaseUrl = () => {
+    let url = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    // Remove trailing slash if present
+    if (url.endsWith('/')) url = url.slice(0, -1);
+    // Remove trailing /api if present (to avoid duplication later)
+    if (url.endsWith('/api')) url = url.slice(0, -4);
+    return url;
+  };
+
+  const API_BASE = getBaseUrl();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -39,11 +49,13 @@ export const Chatbot = () => {
     setIsLoading(true);
 
     try {
-      const res = await axios.post(`${API_URL}/api/chat`, { message: userMsg });
+      // --- FIX: Correct Endpoint Construction ---
+      // This will always result in http://localhost:5000/api/chat
+      const res = await axios.post(`${API_BASE}/api/chat`, { message: userMsg });
 
       setMessages(prev => [...prev, { role: 'bot', content: res.data.response }]);
     } catch (error) {
-      console.error(error);
+      console.error("Chatbot Error:", error);
       setMessages(prev => [...prev, { role: 'bot', content: "I'm having trouble connecting to the server. Please ensure the backend is running." }]);
     } finally {
       setIsLoading(false);
