@@ -24,10 +24,9 @@ interface FormErrors {
 }
 
 // ---------------------------------------------------------
-// API CONFIGURATION (Uses VITE_API_URL from .env)
+// API CONFIGURATION
 // ---------------------------------------------------------
 const API_URL = import.meta.env.VITE_API_URL;
-console.log("Active API Endpoint:", API_URL);
 
 const applicationProcess = [
   { icon: FileText, title: "Submit Resume", description: "Upload your updated resume through our portal or send via email." },
@@ -65,6 +64,7 @@ const Candidates = () => {
     experience: "",
     currentCompany: "",
     currentRole: "",
+    appliedJob: "", // New Field for Dropdown
     skills: "",
     preferredLocation: "",
     noticePeriod: "",
@@ -104,18 +104,21 @@ const Candidates = () => {
     if (formData.experience.trim().length === 0) 
       newErrors.experience = "Experience details are required.";
 
-    if (formData.skills.trim().length < 5) 
-      newErrors.skills = "Please list your primary skills (min 5 chars).";
+    if (formData.skills.trim().length < 2) 
+      newErrors.skills = "Please list your primary skills.";
 
     if (formData.preferredLocation.trim().length < 2) 
       newErrors.preferredLocation = "Enter a location (text only).";
+      
+    if (!formData.appliedJob)
+       newErrors.appliedJob = "Please select a job role.";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // --- Handle Real-time Strict Input Filtering ---
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // --- Handle Input Changes ---
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     let filteredValue = value;
 
@@ -146,12 +149,23 @@ const Candidates = () => {
     }
   };
 
+  // --- Handle "Apply Now" Click from Job Card ---
+  const handleApplyClick = (jobTitle: string) => {
+    setFormData(prev => ({ ...prev, appliedJob: jobTitle }));
+    
+    // Smooth scroll to form
+    const formSection = document.getElementById('register');
+    if (formSection) {
+      formSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) {
       toast({ 
         title: "Validation Error", 
-        description: "Please check the red highlighted fields.", 
+        description: "Please check the highlighted fields.", 
         variant: "destructive" 
       });
       return;
@@ -162,11 +176,17 @@ const Candidates = () => {
       await axios.post(`${API_URL}/candidates`, formData);
       toast({ 
         title: "Profile Submitted!", 
-        description: "We will review your profile and contact you shortly." 
+        description: `Application for ${formData.appliedJob} sent successfully.` 
       });
-      setFormData({ name: "", email: "", phone: "", experience: "", currentCompany: "", currentRole: "", skills: "", preferredLocation: "", noticePeriod: "", message: "" });
+      // Reset form
+      setFormData({ 
+        name: "", email: "", phone: "", experience: "", 
+        currentCompany: "", currentRole: "", appliedJob: "", 
+        skills: "", preferredLocation: "", noticePeriod: "", message: "" 
+      });
       setErrors({});
     } catch (error) {
+      console.error(error);
       toast({ 
         title: "Submission Failed", 
         description: "Network error. Please try again later.", 
@@ -227,7 +247,14 @@ const Candidates = () => {
                         <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> {job.experience}</div>
                       </div>
                     </div>
-                    <Button variant="outline" className="w-full mt-4" asChild><a href="#register">Apply Now</a></Button>
+                    {/* Updated Apply Button to trigger pre-fill and scroll */}
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-4" 
+                      onClick={() => handleApplyClick(job.title)}
+                    >
+                      Apply Now
+                    </Button>
                   </motion.div>
                 ))
               )}
@@ -241,7 +268,7 @@ const Candidates = () => {
         <div className="container-custom">
           <div className="grid lg:grid-cols-2 gap-12">
             <div>
-              <h2 className="text-3xl font-bold font-heading mb-6">Upload Your Profile</h2>
+              <h2 className="text-3xl font-bold font-heading mb-6">Get started</h2>
               <div className="space-y-4">
                 {benefits.map((item, i) => (
                   <div key={i} className="flex items-center gap-3">
@@ -253,6 +280,27 @@ const Candidates = () => {
 
             <motion.div className="glass-card p-8 bg-white dark:bg-slate-950 shadow-2xl border border-border">
               <form onSubmit={handleSubmit} className="space-y-5">
+                
+                {/* --- JOB SELECTION DROPDOWN --- */}
+                <div className="space-y-1">
+                  <Label className={errors.appliedJob ? "text-destructive" : ""}>Applying For *</Label>
+                  <select
+                    name="appliedJob"
+                    value={formData.appliedJob}
+                    onChange={handleChange}
+                    className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${errors.appliedJob ? "border-destructive" : "border-input"}`}
+                  >
+                    <option value="" disabled>Select a Job Role...</option>
+                    <option value="General Application">General Application (No specific role)</option>
+                    {jobs.map((job: any) => (
+                      <option key={job._id} value={job.title}>
+                        {job.title} - {job.location}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.appliedJob && <p className="text-[10px] text-destructive">{errors.appliedJob}</p>}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label className={errors.name ? "text-destructive" : ""}>Full Name (Text only) *</Label>
@@ -299,11 +347,11 @@ const Candidates = () => {
 
                 <div className="space-y-1">
                   <Label>Additional Info</Label>
-                  <Textarea name="message" value={formData.message} onChange={handleChange} placeholder="Anything else..." rows={2} />
+                  <Textarea name="message" value={formData.message} onChange={handleChange} placeholder="Current Company, specific requests..." rows={2} />
                 </div>
 
                 <Button type="submit" size="lg" className="w-full font-bold" disabled={isSubmitting}>
-                  {isSubmitting ? <><Loader2 className="animate-spin mr-2" /> Submitting</> : "Submit Profile"}
+                  {isSubmitting ? <><Loader2 className="animate-spin mr-2" /> Submitting</> : "Submit Application"}
                 </Button>
               </form>
             </motion.div>

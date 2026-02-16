@@ -7,7 +7,9 @@ const candidateSchema = new mongoose.Schema({
   experience: { type: String, required: true },
   currentCompany: { type: String },
   currentRole: { type: String },
-  skills: { type: [String], required: true }, // Stored as array
+  // New field to store the Job Title selected
+  appliedJob: { type: String, default: "General Application" }, 
+  skills: { type: [String], required: true },
   preferredLocation: { type: String },
   noticePeriod: { type: String },
   message: { type: String },

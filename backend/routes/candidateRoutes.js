@@ -9,7 +9,7 @@ router.post("/", async (req, res) => {
   try {
     const { 
       name, email, phone, experience, currentCompany, 
-      currentRole, skills, preferredLocation, noticePeriod, message 
+      currentRole, appliedJob, skills, preferredLocation, noticePeriod, message 
     } = req.body;
 
     // Convert comma-separated skills string to Array
@@ -24,6 +24,7 @@ router.post("/", async (req, res) => {
       experience,
       currentCompany,
       currentRole,
+      appliedJob: appliedJob || "General Application", // Default if empty
       skills: skillsArray,
       preferredLocation,
       noticePeriod,
@@ -39,7 +40,7 @@ router.post("/", async (req, res) => {
 });
 
 // @route   GET /api/candidates
-// @desc    Get all candidates (For Admin Dashboard later)
+// @desc    Get all candidates
 router.get("/", async (req, res) => {
   try {
     const candidates = await Candidate.find().sort({ submittedAt: -1 });
@@ -48,5 +49,29 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// @route   PUT /api/candidates/:id
+// @desc    Update candidate profile
+router.put("/:id", async (req, res) => {
+  try {
+    const updatedCandidate = await Candidate.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true } // Return updated doc
+    );
+    res.status(200).json(updatedCandidate);
+  } catch (error) {
+    res.status(500).json({ message: "Error updating candidate", error: error.message });
+  }
+});
 
+// @route   DELETE /api/candidates/:id
+// @desc    Delete a candidate profile
+router.delete("/:id", async (req, res) => {
+  try {
+    await Candidate.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Candidate deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting candidate" });
+  }
+});
 export default router;
