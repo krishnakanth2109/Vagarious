@@ -8,33 +8,19 @@ dotenv.config();
 const router = express.Router();
 
 /* ===============================
-   SMTP CONFIG (GMAIL – FIXED)
+   SMTP CONFIG (GMAIL)
    =============================== */
-
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",     // DO NOT use `service`
+  host: "smtp.gmail.com",
   port: 587,
-  secure: false,              // TLS
-  family: 4,                  // ✅ FORCE IPv4 (IMPORTANT)
-  connectionTimeout: 60000,   // 60s
-  greetingTimeout: 30000,
-  socketTimeout: 60000,
+  secure: false, // TLS
   auth: {
-    user: process.env.EMAIL_USER, // full gmail
-    pass: process.env.EMAIL_PASS, // 16-char app password
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
   tls: {
     rejectUnauthorized: false,
   },
-});
-
-// Verify SMTP once on startup
-transporter.verify((err) => {
-  if (err) {
-    console.error("❌ SMTP VERIFY FAILED:", err);
-  } else {
-    console.log("✅ SMTP READY (Gmail IPv4 connected)");
-  }
 });
 
 /* ===============================
@@ -43,8 +29,8 @@ transporter.verify((err) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const admin = await Admin.findOne({ email });
+    
     if (!admin) return res.status(400).json({ message: "Invalid credentials" });
 
     const isMatch = await bcrypt.compare(password, admin.password);
@@ -66,39 +52,28 @@ router.post("/login", async (req, res) => {
 router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
-
     const admin = await Admin.findOne({ email });
+    
     if (!admin) return res.status(404).json({ message: "Admin email not found" });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     admin.otp = otp;
-    admin.otpExpires = Date.now() + 10 * 60 * 1000;
+    admin.otpExpires = Date.now() + 10 * 60 * 1000; // 10 mins
     await admin.save();
 
     const mailOptions = {
       from: `"VGS Security" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Vagarious Solutions - Password Reset OTP",
-      html: `
-        <div style="font-family:Arial;padding:20px;max-width:600px;margin:auto">
-          <h2>Password Reset OTP</h2>
-          <p>Your OTP:</p>
-          <h1 style="letter-spacing:5px">${otp}</h1>
-          <p>Valid for 10 minutes.</p>
-        </div>
-      `,
+      subject: "Password Reset OTP",
+      html: `<h3>Your OTP is: ${otp}</h3>`,
     };
 
-    // Respond fast
+    await transporter.sendMail(mailOptions);
     res.json({ message: "OTP sent successfully" });
 
-    // Send mail async
-    const info = await transporter.sendMail(mailOptions);
-    console.log("📧 Mail accepted:", info.accepted);
-
   } catch (err) {
-    console.error("❌ OTP SEND ERROR:", err);
+    console.error(err);
     res.status(500).json({ message: "Failed to send OTP" });
   }
 });
@@ -123,7 +98,7 @@ router.post("/reset-password", async (req, res) => {
     admin.otpExpires = null;
     await admin.save();
 
-    res.json({ message: "Password reset successful. Please login." });
+    res.json({ message: "Password reset successful." });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -131,12 +106,39 @@ router.post("/reset-password", async (req, res) => {
 });
 
 /* ===============================
-   4. SEED ADMIN (OPTIONAL)
+   4. CHANGE PASSWORD (LOGGED IN)
+   =============================== */
+// THIS WAS MISSING IN YOUR FILE causing 404
+router.put("/change-password", async (req, res) => {
+  try {
+    const { email, currentPassword, newPassword } = req.body;
+
+    // 1. Find Admin
+    const admin = await Admin.findOne({ email });
+    if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+    // 2. Verify Current Password
+    const isMatch = await bcrypt.compare(currentPassword, admin.password);
+    if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
+
+    // 3. Hash and Save New Password
+    const salt = await bcrypt.genSalt(10);
+    admin.password = await bcrypt.hash(newPassword, salt);
+    await admin.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* ===============================
+   5. SEED ADMIN
    =============================== */
 router.post("/seed", async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const existing = await Admin.findOne({ email });
     if (existing) return res.status(400).json({ message: "Admin exists" });
 

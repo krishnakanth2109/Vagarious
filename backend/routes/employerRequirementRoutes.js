@@ -70,8 +70,6 @@ const updateRequirementStatus = async (req, res) => {
   try {
     const { status } = req.body;
     
-    // Validate status enum if needed, or rely on Mongoose enum validation
-    
     const requirement = await EmployerRequirement.findByIdAndUpdate(
       req.params.id,
       { status },
@@ -89,6 +87,23 @@ const updateRequirementStatus = async (req, res) => {
   }
 };
 
+// @desc    Delete a requirement
+// @route   DELETE /api/employer-requirements/:id
+const deleteRequirement = async (req, res) => {
+  try {
+    const requirement = await EmployerRequirement.findByIdAndDelete(req.params.id);
+
+    if (!requirement) {
+      return res.status(404).json({ message: "Requirement not found" });
+    }
+
+    res.status(200).json({ message: "Requirement deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting requirement:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 /* =====================================================
    ROUTE DEFINITIONS
 ===================================================== */
@@ -101,5 +116,8 @@ router.get("/", getAllRequirements);
 
 // Route to update status
 router.put("/:id", updateRequirementStatus);
+
+// Route to delete (NEWLY ADDED)
+router.delete("/:id", deleteRequirement);
 
 export default router;

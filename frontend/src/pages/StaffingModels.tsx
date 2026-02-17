@@ -343,9 +343,7 @@ const StaffingModels = () => {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" variant="secondary" asChild>
-                <Link to="/contact">
-                  Get Personalized Recommendation <ArrowRight className="w-5 h-5" />
-                </Link>
+              
               </Button>
             
             </div>

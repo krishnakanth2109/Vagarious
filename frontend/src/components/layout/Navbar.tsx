@@ -537,9 +537,7 @@ export function Navbar() {
                 transition={{ delay: 0.3 }}
                 className="pt-6 border-t border-gray-200 dark:border-gray-800 mt-4"
               >
-                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3 px-4">
-                  Connect With Us
-                </p>
+              
                 <div className="flex items-center justify-center gap-3">
                   {socialMediaLinks.map((social, index) => (
                     <motion.div

@@ -10,7 +10,8 @@ import {
   FileText,
   Users,
   ChevronLeft,
-  Menu
+  Menu,
+  MessageSquare // Imported Icon for Contacts
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -43,8 +44,9 @@ const AdminLayout = ({ children, title = "Dashboard" }: AdminLayoutProps) => {
   const menuItems = [
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "Jobs", path: "/admin-jobs", icon: Briefcase },
-    { name: "Applications", path: "/admin-candidates", icon: FileText }, 
-    { name: "Employer Reqs", path: "/admin-requirements", icon: Users },
+    { name: "Candidate Applications", path: "/admin-candidates", icon: FileText }, 
+    { name: "Employer Requirement", path: "/admin-requirements", icon: Users },
+    { name: "Contact Messages", path: "/admin-contacts", icon: MessageSquare }, // ADDED THIS LINE
     { name: "Settings", path: "/settings", icon: Settings },
   ];
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import axios from "axios"; // Import Axios
 import { 
   MapPin, 
   Phone, 
@@ -8,7 +9,8 @@ import {
   Send,
   MessageSquare,
   Building2,
-  Loader2
+  Loader2,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +24,9 @@ import heroContact from "@/assets/hero-contact.jpg";
 interface FormErrors {
   [key: string]: string;
 }
+
+// Configuration for API URL
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const contactInfo = [
   {
@@ -50,6 +55,7 @@ const Contact = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -114,6 +120,7 @@ const Contact = () => {
     }
   };
 
+  // --- Handle Form Submission (Connected to Backend) ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -128,15 +135,33 @@ const Contact = () => {
 
     setLoading(true);
 
-    // Simulated API Call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // 1. Send Data to Backend
+      await axios.post(`${API_URL}/contact`, formData);
+
+      // 2. Success Feedback
       toast({
-        title: "Message Sent!",
-        description: "Thank you for contacting us. We'll get back to you within 24 hours.",
+        title: "Message Sent Successfully!",
+        description: "Thank you. Our team will contact you within 24 hours.",
+        action: <CheckCircle2 className="text-green-500 w-5 h-5" />
       });
+
+      // 3. Reset Form
       setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
-    }, 1500);
+      setErrors({});
+
+    } catch (error: any) {
+      console.error("Submission Error:", error);
+      const errorMsg = error.response?.data?.message || "Something went wrong. Please try again.";
+      
+      toast({
+        title: "Message Failed",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -151,7 +176,7 @@ const Contact = () => {
       <section className="section-padding bg-background">
         <div className="container-custom">
           <div className="grid lg:grid-cols-3 gap-8">
-            {/* Contact Info */}
+            {/* Contact Info Sidebar */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -177,7 +202,7 @@ const Contact = () => {
                 ))}
               </div>
 
-              {/* Map */}
+              {/* Map Embed */}
               <div className="mt-8">
                 <h3 className="font-semibold mb-4">Find Us</h3>
                 <div className="aspect-video rounded-2xl overflow-hidden glass-card border border-border">

@@ -196,12 +196,7 @@ const Services = () => {
                   ))}
                 </ul>
                 <div className="mt-6">
-                  <Link 
-                    to={service.link} 
-                    className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium text-sm hover:gap-3 transition-all"
-                  >
-                    Learn more <ChevronRight className="w-4 h-4" />
-                  </Link>
+                 
                 </div>
               </motion.div>
             ))}
@@ -249,12 +244,7 @@ const Services = () => {
                   ))}
                 </ul>
                 <div className="mt-6">
-                  <Link 
-                    to={service.link} 
-                    className="inline-flex items-center gap-2 text-purple-600 dark:text-purple-400 font-medium text-sm hover:gap-3 transition-all"
-                  >
-                    Learn more <ChevronRight className="w-4 h-4" />
-                  </Link>
+                
                 </div>
               </motion.div>
             ))}
@@ -308,12 +298,7 @@ const Services = () => {
                       </li>
                     ))}
                   </ul>
-                  <Link 
-                    to={model.link} 
-                    className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium text-sm hover:gap-3 transition-all"
-                  >
-                    Learn more about this model <ChevronRight className="w-4 h-4" />
-                  </Link>
+              
                 </div>
               </motion.div>
             ))}

@@ -15,7 +15,7 @@ import employerRequirementRoutes from "./routes/employerRequirementRoutes.js";
 import nonITRoleRoutes from "./routes/nonITRoleRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-
+import contactRoutes from "./routes/contactRoutes.js"; // <--- Import this
 // Load environment variables
 dotenv.config();
 
@@ -81,7 +81,7 @@ app.use("/api/employer-requirements", employerRequirementRoutes);
 app.use("/api/non-it-roles", nonITRoleRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/auth", authRoutes);
-
+app.use("/api/contact", contactRoutes); // <--- Add this line
 // Root Route (Health Check)
 app.get("/", (req, res) => {
   res.json({

@@ -30,6 +30,8 @@ import AdminCandidates from "./pages/admin/AdminCandidates";
 import AdminITRecruitment from "./pages/admin/AdminITRecruitment";
 import AdminEmployerRequirements from "./pages/admin/AdminEmployerRequirements";
 import AdminNonITRoles from "./pages/admin/AdminNonITRoles";
+// --- NEW IMPORT ---
+import AdminContacts from "./pages/admin/AdminContacts";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +81,9 @@ const App: React.FC = () => (
           <Route path="/admin-it-recruitment" element={<AdminITRecruitment />} />
           <Route path="/admin-non-it-roles" element={<AdminNonITRoles />} />
           <Route path="/admin-requirements" element={<AdminEmployerRequirements />} />
+          
+          {/* --- NEW ADMIN CONTACT ROUTE --- */}
+          <Route path="/admin-contacts" element={<AdminContacts />} />
 
           {/* 404 Route */}
           <Route path="*" element={<NotFound />} />

@@ -1,94 +1,186 @@
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { toast } from "sonner";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { motion } from "framer-motion";
-import { Save, User, Bell, Lock, Shield } from "lucide-react";
+import { Save, Lock, ShieldCheck, Loader2, Eye, EyeOff } from "lucide-react";
 
 const Settings = () => {
+  const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+  
+  const [formData, setFormData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  // 1. Load Admin Email on Component Mount
+  useEffect(() => {
+    // Check both potential storage keys
+    const storedAuth = sessionStorage.getItem("isAuthenticated");
+    const storedUser = sessionStorage.getItem("user") || sessionStorage.getItem("adminUser");
+    
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        // Handle structure: { user: { email: "" } } or { email: "" }
+        const email = parsed.email || parsed.user?.email || "admin@vgs.com";
+        setAdminEmail(email);
+      } catch (e) {
+        console.error("Error parsing user session", e);
+        setAdminEmail("admin@vgs.com");
+      }
+    } else {
+      console.warn("No user found in session storage");
+      setAdminEmail("admin@vgs.com"); // Fallback
+    }
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (formData.newPassword !== formData.confirmPassword) {
+      return toast.error("New passwords do not match");
+    }
+    if (formData.newPassword.length < 6) {
+      return toast.error("Password must be at least 6 characters");
+    }
+
+    setLoading(true);
+    
+    // 2. Construct API URL
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    const fullUrl = `${API_URL}/auth/change-password`;
+
+    // Debugging Logs
+    console.log("Submitting to:", fullUrl);
+    console.log("Payload:", {
+      email: adminEmail,
+      currentPassword: formData.currentPassword,
+      newPassword: formData.newPassword
+    });
+
+    try {
+      const response = await axios.put(fullUrl, {
+        email: adminEmail,
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword,
+      });
+
+      console.log("Success:", response.data);
+      toast.success(response.data.message || "Password changed successfully");
+      
+      // Clear form
+      setFormData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error: any) {
+      console.error("Error details:", error);
+      
+      // Handle specific error messages from backend
+      const msg = error.response?.data?.message || "Failed to update password. Check console.";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <AdminLayout title="System Settings">
+    <AdminLayout title="Security Settings">
       <motion.div 
         initial={{ opacity: 0, y: 20 }} 
         animate={{ opacity: 1, y: 0 }} 
-        className="grid grid-cols-1 xl:grid-cols-3 gap-8"
+        className="max-w-2xl mx-auto"
       >
-        
-        {/* Sidebar Navigation for Settings */}
-        <div className="xl:col-span-1 space-y-4">
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <nav className="space-y-1">
-                    <button className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg font-medium">
-                        <User size={18} /> Profile Settings
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition font-medium">
-                        <Bell size={18} /> Notifications
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition font-medium">
-                        <Lock size={18} /> Security
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition font-medium">
-                        <Shield size={18} /> Roles & Permissions
-                    </button>
-                </nav>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Header */}
+          <div className="p-8 bg-slate-50 border-b border-gray-100 flex items-center gap-4">
+            <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
+              <ShieldCheck size={24} />
             </div>
-        </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-800">Change Password</h3>
+              <p className="text-sm text-gray-500">
+                Account: <span className="font-semibold text-gray-700">{adminEmail}</span>
+              </p>
+            </div>
+          </div>
 
-        {/* Main Form Area */}
-        <div className="xl:col-span-2 space-y-6">
-            
-            {/* Profile Section */}
-            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <User className="text-blue-500" size={20}/> General Information
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-700">First Name</label>
-                        <input type="text" defaultValue="Admin" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-700">Last Name</label>
-                        <input type="text" defaultValue="User" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
-                    </div>
-                    <div className="md:col-span-2 space-y-2">
-                        <label className="text-sm font-semibold text-gray-700">Email Address</label>
-                        <input type="email" defaultValue="admin@vgs.com" className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
-                    </div>
-                    <div className="md:col-span-2 space-y-2">
-                        <label className="text-sm font-semibold text-gray-700">Bio</label>
-                        <textarea className="w-full h-24 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition resize-none" defaultValue="Super Administrator for VGS Recruitment Portal." />
-                    </div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <div className="space-y-4">
+              
+              {/* Current Password */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Current Password</label>
+                <div className="relative">
+                  <input
+                    name="currentPassword"
+                    type={showPass ? "text" : "password"}
+                    value={formData.currentPassword}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    placeholder="Enter current password"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPass(!showPass)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-            </div>
+              </div>
 
-            {/* Notifications Section */}
-            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <Bell className="text-blue-500" size={20}/> Email Preferences
-                </h3>
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div>
-                            <p className="font-semibold text-gray-800">New Application Alerts</p>
-                            <p className="text-xs text-gray-500">Get notified when a candidate applies.</p>
-                        </div>
-                        <input type="checkbox" className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div>
-                            <p className="font-semibold text-gray-800">System Updates</p>
-                            <p className="text-xs text-gray-500">Receive changelogs and maintenance alerts.</p>
-                        </div>
-                        <input type="checkbox" className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500" />
-                    </div>
+              <hr className="my-6 border-gray-100" />
+
+              {/* New Password */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">New Password</label>
+                  <input
+                    name="newPassword"
+                    type="password"
+                    value={formData.newPassword}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    placeholder="Min 6 chars"
+                  />
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">Confirm Password</label>
+                  <input
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    placeholder="Repeat new password"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Save Button */}
-            <div className="flex justify-end pt-4">
-                <button className="flex items-center gap-2 px-8 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-medium shadow-lg">
-                    <Save size={18} /> Save Changes
-                </button>
+            <div className="pt-4">
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-bold shadow-lg shadow-blue-200 disabled:opacity-70"
+              >
+                {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                {loading ? "Updating..." : "Update Password"}
+              </button>
             </div>
+          </form>
         </div>
       </motion.div>
     </AdminLayout>
