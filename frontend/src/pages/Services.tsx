@@ -120,14 +120,7 @@ const staffingModels = [
     color: "from-purple-500 to-pink-500",
     link: "/StaffingModels"
   },
-  {
-    icon: UsersRound,
-    title: "Bulk Hiring",
-    description: "Large-scale recruitment drives for organizations with high-volume hiring needs across multiple locations.",
-    features: ["Dedicated hiring team", "Campus & walk-in drives", "Assessment center setup", "Multi-location coordination"],
-    color: "from-green-500 to-emerald-500",
-    link: "/StaffingModels"
-  },
+  
   {
     icon: Building2,
     title: "Executive Search",
