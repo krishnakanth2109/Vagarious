@@ -108,27 +108,35 @@ router.post("/reset-password", async (req, res) => {
 /* ===============================
    4. CHANGE PASSWORD (LOGGED IN)
    =============================== */
-// THIS WAS MISSING IN YOUR FILE causing 404
 router.put("/change-password", async (req, res) => {
   try {
     const { email, currentPassword, newPassword } = req.body;
 
+    console.log("Change password request:", { email, hasCurrentPwd: !!currentPassword, hasNewPwd: !!newPassword });
+
     // 1. Find Admin
     const admin = await Admin.findOne({ email });
-    if (!admin) return res.status(404).json({ message: "Admin not found" });
+    if (!admin) {
+      console.log("Admin not found:", email);
+      return res.status(404).json({ message: "Admin not found" });
+    }
 
     // 2. Verify Current Password
     const isMatch = await bcrypt.compare(currentPassword, admin.password);
-    if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
+    if (!isMatch) {
+      console.log("Current password mismatch for:", email);
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
 
     // 3. Hash and Save New Password
     const salt = await bcrypt.genSalt(10);
     admin.password = await bcrypt.hash(newPassword, salt);
     await admin.save();
 
+    console.log("Password updated successfully for:", email);
     res.json({ message: "Password updated successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("Change password error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

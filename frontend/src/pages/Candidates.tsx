@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   ArrowRight, Search, MapPin, Briefcase, Clock, Upload,
-  CheckCircle2, FileText, Users, TrendingUp, Award, Loader2
+  CheckCircle2, FileText, Users, TrendingUp, Award, Loader2,
+  Calendar, Layers, Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,7 @@ interface FormErrors {
 // ---------------------------------------------------------
 // API CONFIGURATION
 // ---------------------------------------------------------
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const applicationProcess = [
   { icon: FileText, title: "Submit Resume", description: "Upload your updated resume through our portal or send via email." },
@@ -64,7 +65,7 @@ const Candidates = () => {
     experience: "",
     currentCompany: "",
     currentRole: "",
-    appliedJob: "", // New Field for Dropdown
+    appliedJob: "", 
     skills: "",
     preferredLocation: "",
     noticePeriod: "",
@@ -74,7 +75,6 @@ const Candidates = () => {
   // Fetch Jobs from Backend
   useEffect(() => {
     const fetchJobs = async () => {
-      if (!API_URL) return;
       try {
         const response = await axios.get(`${API_URL}/jobs`);
         setJobs(response.data);
@@ -139,7 +139,6 @@ const Candidates = () => {
 
     setFormData(prev => ({ ...prev, [name]: filteredValue }));
 
-    // Clear error for field as user types
     if (errors[name]) {
       setErrors(prev => {
         const newErrs = { ...prev };
@@ -149,11 +148,8 @@ const Candidates = () => {
     }
   };
 
-  // --- Handle "Apply Now" Click from Job Card ---
   const handleApplyClick = (jobTitle: string) => {
     setFormData(prev => ({ ...prev, appliedJob: jobTitle }));
-    
-    // Smooth scroll to form
     const formSection = document.getElementById('register');
     if (formSection) {
       formSection.scrollIntoView({ behavior: 'smooth' });
@@ -178,7 +174,6 @@ const Candidates = () => {
         title: "Profile Submitted!", 
         description: `Application for ${formData.appliedJob} sent successfully.` 
       });
-      // Reset form
       setFormData({ 
         name: "", email: "", phone: "", experience: "", 
         currentCompany: "", currentRole: "", appliedJob: "", 
@@ -186,7 +181,6 @@ const Candidates = () => {
       });
       setErrors({});
     } catch (error) {
-      console.error(error);
       toast({ 
         title: "Submission Failed", 
         description: "Network error. Please try again later.", 
@@ -200,7 +194,8 @@ const Candidates = () => {
   const filteredJobs = jobs.filter(
     (job: any) =>
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.location.toLowerCase().includes(searchTerm.toLowerCase())
+      job.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.company.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -215,45 +210,80 @@ const Candidates = () => {
         <Button variant="hero-outline" size="lg" asChild><a href="#jobs">View Jobs</a></Button>
       </HeroBanner>
 
-      {/* Jobs Search */}
+      {/* Jobs Search & Display Section */}
       <section id="jobs" className="section-padding scroll-mt-24">
         <div className="container-custom">
           <SectionHeading subtitle="Current Openings" title="Featured Job Opportunities" />
           
-          <div className="mb-8 relative max-w-xl mx-auto">
+          <div className="mb-12 relative max-w-xl mx-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
-              placeholder="Search by job title or location..."
+              placeholder="Search by role, location, or company..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 h-12 rounded-xl"
+              className="pl-12 h-14 rounded-2xl border-primary/20 focus:ring-primary shadow-sm"
             />
           </div>
 
           {jobsLoading ? (
-            <div className="text-center py-10"><Loader2 className="animate-spin mx-auto w-8 h-8 text-primary" /></div>
+            <div className="text-center py-20"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredJobs.length === 0 ? (
-                <div className="col-span-full text-center py-10 text-muted-foreground">No jobs found.</div>
+                <div className="col-span-full text-center py-20 text-muted-foreground bg-muted/20 rounded-2xl border-2 border-dashed border-muted">
+                  No matches found for "{searchTerm}".
+                </div>
               ) : (
                 filteredJobs.map((job: any, index) => (
-                  <motion.div key={job._id || index} className="glass-card-hover p-6 flex flex-col justify-between border border-border">
+                  <motion.div 
+                    key={job._id || index} 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="glass-card-hover p-6 flex flex-col justify-between border border-border bg-white dark:bg-slate-900 rounded-2xl shadow-sm relative overflow-hidden group"
+                  >
+                    <div className="absolute top-0 right-0 p-3">
+                       <span className="text-[10px] font-bold uppercase tracking-widest bg-blue-50 text-blue-600 px-2 py-1 rounded-md border border-blue-100">
+                          {job.type || "Full-time"}
+                       </span>
+                    </div>
+
                     <div>
-                      <h3 className="text-lg font-bold font-heading">{job.title}</h3>
-                      <p className="text-muted-foreground text-sm mb-4">{job.company}</p>
-                      <div className="space-y-1 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {job.location}</div>
-                        <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> {job.experience}</div>
+                      <h3 className="text-xl font-bold font-heading text-gray-900 dark:text-white line-clamp-1 mb-1">{job.title}</h3>
+                      <p className="text-primary font-bold text-sm mb-4 flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-primary" /> {job.company}
+                      </p>
+                      
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="w-4 h-4 text-primary/60" /> {job.location}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="w-4 h-4 text-primary/60" /> {job.experience} Required
+                        </div>
+                      </div>
+
+                      {job.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-3 mb-4 leading-relaxed">
+                          {job.description}
+                        </p>
+                      )}
+
+                      <div className="flex flex-wrap gap-1.5 mb-6">
+                        {Array.isArray(job.skills) ? job.skills.slice(0, 4).map((skill: string, i: number) => (
+                          <span key={i} className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-md font-medium border border-slate-200 dark:border-slate-700">
+                            {skill}
+                          </span>
+                        )) : null}
+                        {job.skills?.length > 4 && <span className="text-[10px] text-muted-foreground">+{job.skills.length - 4} more</span>}
                       </div>
                     </div>
-                    {/* Updated Apply Button to trigger pre-fill and scroll */}
+
                     <Button 
-                      variant="outline" 
-                      className="w-full mt-4" 
+                      className="w-full mt-auto font-bold group-hover:bg-primary transition-all rounded-xl" 
                       onClick={() => handleApplyClick(job.title)}
                     >
-                      Apply Now
+                      Apply Now <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </motion.div>
                 ))
@@ -263,95 +293,105 @@ const Candidates = () => {
         </div>
       </section>
 
-      {/* Profile Submission Form */}
+      {/* Profile Submission Form Section */}
       <section id="register" className="section-padding scroll-mt-24 bg-muted/30">
         <div className="container-custom">
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
             <div>
-              <h2 className="text-3xl font-bold font-heading mb-6">Get started</h2>
-              <div className="space-y-4">
+              <SectionHeading subtitle="Register with us" title="Join Our Talent Network" />
+              <p className="text-muted-foreground mb-8 text-lg">
+                Complete your profile to get discovered by top recruiters. We match your expertise with high-impact roles.
+              </p>
+              <div className="space-y-6">
                 {benefits.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-primary" /> <span>{item}</span>
+                  <div key={i} className="flex items-center gap-4 bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-white dark:border-slate-800 shadow-sm">
+                    <div className="bg-primary/10 p-2 rounded-lg">
+                      <CheckCircle2 className="w-6 h-6 text-primary" />
+                    </div>
+                    <span className="font-semibold text-gray-700 dark:text-slate-300">{item}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <motion.div className="glass-card p-8 bg-white dark:bg-slate-950 shadow-2xl border border-border">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              className="glass-card p-8 bg-white dark:bg-slate-950 shadow-2xl border border-border rounded-2xl"
+            >
               <form onSubmit={handleSubmit} className="space-y-5">
                 
-                {/* --- JOB SELECTION DROPDOWN --- */}
-                <div className="space-y-1">
-                  <Label className={errors.appliedJob ? "text-destructive" : ""}>Applying For *</Label>
+                {/* JOB SELECTION DROPDOWN */}
+                <div className="space-y-2">
+                  <Label className={`font-bold ${errors.appliedJob ? "text-destructive" : ""}`}>Applying For *</Label>
                   <select
                     name="appliedJob"
                     value={formData.appliedJob}
                     onChange={handleChange}
-                    className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${errors.appliedJob ? "border-destructive" : "border-input"}`}
+                    className={`flex h-12 w-full rounded-xl border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none transition-all ${errors.appliedJob ? "border-destructive" : "border-input"}`}
                   >
                     <option value="" disabled>Select a Job Role...</option>
                     <option value="General Application">General Application (No specific role)</option>
                     {jobs.map((job: any) => (
                       <option key={job._id} value={job.title}>
-                        {job.title} - {job.location}
+                        {job.title} - {job.location} ({job.company})
                       </option>
                     ))}
                   </select>
-                  {errors.appliedJob && <p className="text-[10px] text-destructive">{errors.appliedJob}</p>}
+                  {errors.appliedJob && <p className="text-[10px] text-destructive font-medium">{errors.appliedJob}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label className={errors.name ? "text-destructive" : ""}>Full Name (Text only) *</Label>
-                    <Input name="name" value={formData.name} onChange={handleChange} placeholder="Full Name" className={errors.name ? "border-destructive" : ""} />
-                    {errors.name && <p className="text-[10px] text-destructive">{errors.name}</p>}
+                  <div className="space-y-2">
+                    <Label className={`font-bold ${errors.name ? "text-destructive" : ""}`}>Full Name (Text only) *</Label>
+                    <Input name="name" value={formData.name} onChange={handleChange} placeholder="John Doe" className={`h-12 rounded-xl ${errors.name ? "border-destructive" : ""}`} />
+                    {errors.name && <p className="text-[10px] text-destructive font-medium">{errors.name}</p>}
                   </div>
-                  <div className="space-y-1">
-                    <Label className={errors.email ? "text-destructive" : ""}>Email Address *</Label>
-                    <Input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="email@example.com" className={errors.email ? "border-destructive" : ""} />
-                    {errors.email && <p className="text-[10px] text-destructive">{errors.email}</p>}
+                  <div className="space-y-2">
+                    <Label className={`font-bold ${errors.email ? "text-destructive" : ""}`}>Email Address *</Label>
+                    <Input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="john@example.com" className={`h-12 rounded-xl ${errors.email ? "border-destructive" : ""}`} />
+                    {errors.email && <p className="text-[10px] text-destructive font-medium">{errors.email}</p>}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label className={errors.phone ? "text-destructive" : ""}>Phone (10 digits) *</Label>
-                    <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="10 Digit Number" className={errors.phone ? "border-destructive" : ""} />
-                    {errors.phone && <p className="text-[10px] text-destructive">{errors.phone}</p>}
+                  <div className="space-y-2">
+                    <Label className={`font-bold ${errors.phone ? "text-destructive" : ""}`}>Phone (10 digits) *</Label>
+                    <Input name="phone" value={formData.phone} onChange={handleChange} placeholder="9876543210" className={`h-12 rounded-xl ${errors.phone ? "border-destructive" : ""}`} />
+                    {errors.phone && <p className="text-[10px] text-destructive font-medium">{errors.phone}</p>}
                   </div>
-                  <div className="space-y-1">
-                    <Label className={errors.experience ? "text-destructive" : ""}>Experience (e.g. 2+) *</Label>
-                    <Input name="experience" value={formData.experience} onChange={handleChange} placeholder="Years" className={errors.experience ? "border-destructive" : ""} />
-                    {errors.experience && <p className="text-[10px] text-destructive">{errors.experience}</p>}
+                  <div className="space-y-2">
+                    <Label className={`font-bold ${errors.experience ? "text-destructive" : ""}`}>Exp Years (e.g. 2.5) *</Label>
+                    <Input name="experience" value={formData.experience} onChange={handleChange} placeholder="Years" className={`h-12 rounded-xl ${errors.experience ? "border-destructive" : ""}`} />
+                    {errors.experience && <p className="text-[10px] text-destructive font-medium">{errors.experience}</p>}
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label className={errors.skills ? "text-destructive" : ""}>Key Skills *</Label>
-                  <Input name="skills" value={formData.skills} onChange={handleChange} placeholder="React, Node.js, etc." className={errors.skills ? "border-destructive" : ""} />
-                  {errors.skills && <p className="text-[10px] text-destructive">{errors.skills}</p>}
+                <div className="space-y-2">
+                  <Label className={`font-bold ${errors.skills ? "text-destructive" : ""}`}>Key Skills *</Label>
+                  <Input name="skills" value={formData.skills} onChange={handleChange} placeholder="React, Node.js, Project Management" className={`h-12 rounded-xl ${errors.skills ? "border-destructive" : ""}`} />
+                  {errors.skills && <p className="text-[10px] text-destructive font-medium">{errors.skills}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label className={errors.preferredLocation ? "text-destructive" : ""}>Preferred Location (Text only) *</Label>
-                    <Input name="preferredLocation" value={formData.preferredLocation} onChange={handleChange} placeholder="e.g. Hyderabad" className={errors.preferredLocation ? "border-destructive" : ""} />
-                    {errors.preferredLocation && <p className="text-[10px] text-destructive">{errors.preferredLocation}</p>}
+                  <div className="space-y-2">
+                    <Label className={`font-bold ${errors.preferredLocation ? "text-destructive" : ""}`}>Preferred Location *</Label>
+                    <Input name="preferredLocation" value={formData.preferredLocation} onChange={handleChange} placeholder="e.g. Bangalore" className={`h-12 rounded-xl ${errors.preferredLocation ? "border-destructive" : ""}`} />
+                    {errors.preferredLocation && <p className="text-[10px] text-destructive font-medium">{errors.preferredLocation}</p>}
                   </div>
-                  <div className="space-y-1">
-                    <Label>Notice Period</Label>
-                    <Input name="noticePeriod" value={formData.noticePeriod} onChange={handleChange} placeholder="e.g. 30 days" />
+                  <div className="space-y-2">
+                    <Label className="font-bold">Notice Period</Label>
+                    <Input name="noticePeriod" value={formData.noticePeriod} onChange={handleChange} placeholder="e.g. 30 days" className="h-12 rounded-xl" />
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label>Additional Info</Label>
-                  <Textarea name="message" value={formData.message} onChange={handleChange} placeholder="Current Company, specific requests..." rows={2} />
+                <div className="space-y-2">
+                  <Label className="font-bold">Message or Current Role</Label>
+                  <Textarea name="message" value={formData.message} onChange={handleChange} placeholder="Tell us more about your career goals..." rows={3} className="rounded-xl" />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full font-bold" disabled={isSubmitting}>
-                  {isSubmitting ? <><Loader2 className="animate-spin mr-2" /> Submitting</> : "Submit Application"}
+                <Button type="submit" size="lg" className="w-full font-bold h-14 rounded-xl shadow-lg shadow-primary/20" disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader2 className="animate-spin mr-2" /> Processing...</> : "Submit Application"}
                 </Button>
               </form>
             </motion.div>
@@ -359,16 +399,16 @@ const Candidates = () => {
         </div>
       </section>
 
-      {/* FAQs */}
+      {/* FAQ Section */}
       <section className="section-padding bg-muted/50">
         <div className="container-custom">
-          <SectionHeading subtitle="FAQs" title="Frequently Asked Questions" />
+          <SectionHeading subtitle="FAQs" title="Common Questions" />
           <div className="max-w-3xl mx-auto">
             <Accordion type="single" collapsible className="space-y-4">
               {faqs.map((faq, index) => (
-                <AccordionItem key={index} value={`item-${index}`} className="glass-card px-6 border-none">
-                  <AccordionTrigger className="text-left hover:no-underline font-semibold">{faq.question}</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">{faq.answer}</AccordionContent>
+                <AccordionItem key={index} value={`item-${index}`} className="glass-card px-6 border-none bg-white dark:bg-slate-900 rounded-xl">
+                  <AccordionTrigger className="text-left hover:no-underline font-bold py-5">{faq.question}</AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pb-5 leading-relaxed">{faq.answer}</AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>

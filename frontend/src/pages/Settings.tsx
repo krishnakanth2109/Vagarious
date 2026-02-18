@@ -8,7 +8,8 @@ import { Save, Lock, ShieldCheck, Loader2, Eye, EyeOff } from "lucide-react";
 const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const [adminEmail, setAdminEmail] = useState("");
+  
+  const [adminEmail, setAdminEmail] = useState("career.arahinfotech@gmail.com");
   
   const [formData, setFormData] = useState({
     currentPassword: "",
@@ -16,33 +17,32 @@ const Settings = () => {
     confirmPassword: "",
   });
 
-  // 1. Load Admin Email on Component Mount
+  // Load Admin Email on Component Mount
   useEffect(() => {
-    // Check both potential storage keys
-    const storedAuth = sessionStorage.getItem("isAuthenticated");
     const storedUser = sessionStorage.getItem("user") || sessionStorage.getItem("adminUser");
     
+    const CORRECT_ADMIN_EMAIL = "career.arahinfotech@gmail.com";
+
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
-        // Handle structure: { user: { email: "" } } or { email: "" }
-        const email = parsed.email || parsed.user?.email || "admin@vgs.com";
+        const email = parsed.email || parsed.user?.email || CORRECT_ADMIN_EMAIL;
         setAdminEmail(email);
       } catch (e) {
         console.error("Error parsing user session", e);
-        setAdminEmail("admin@vgs.com");
+        setAdminEmail(CORRECT_ADMIN_EMAIL);
       }
     } else {
-      console.warn("No user found in session storage");
-      setAdminEmail("admin@vgs.com"); // Fallback
+      console.warn("No user found in session storage, using default");
+      setAdminEmail(CORRECT_ADMIN_EMAIL); 
     }
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validation
@@ -55,11 +55,10 @@ const Settings = () => {
 
     setLoading(true);
     
-    // 2. Construct API URL
-    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-    const fullUrl = `${API_URL}/auth/change-password`;
+    // FIXED: .env already has /api suffix, so don't add it again
+    const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    const fullUrl = `${BASE_URL}/auth/change-password`;
 
-    // Debugging Logs
     console.log("Submitting to:", fullUrl);
     console.log("Payload:", {
       email: adminEmail,
@@ -79,10 +78,8 @@ const Settings = () => {
       
       // Clear form
       setFormData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error details:", error);
-      
-      // Handle specific error messages from backend
       const msg = error.response?.data?.message || "Failed to update password. Check console.";
       toast.error(msg);
     } finally {

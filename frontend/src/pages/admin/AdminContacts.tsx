@@ -11,8 +11,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Mail, Phone, Calendar } from "lucide-react";
+import { Mail, Phone, Calendar, MessageSquare, User } from "lucide-react";
 
+// --- TYPES ---
 interface ContactMessage {
   _id: string;
   name: string;
@@ -24,6 +25,10 @@ interface ContactMessage {
   submittedAt: string;
 }
 
+// --- CONFIGURATION ---
+// Takes URL from .env (e.g., http://localhost:5000/api) 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 const AdminContacts = () => {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,18 +36,26 @@ const AdminContacts = () => {
 
   useEffect(() => {
     const fetchMessages = async () => {
+      setLoading(true);
       try {
-        const response = await fetch("http://localhost:5000/api/contact"); // Ensure this matches your backend URL
+        // Construct the full URL: Base + /contact
+        const response = await fetch(`${API_BASE_URL}/contact`);
         
         if (!response.ok) {
-          throw new Error("Failed to fetch messages");
+          throw new Error(`Error ${response.status}: Failed to fetch messages`);
         }
         
         const data = await response.json();
-        setMessages(data);
+        
+        // Sort messages: Newest first
+        const sortedData = data.sort((a: ContactMessage, b: ContactMessage) => 
+          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+        );
+        
+        setMessages(sortedData);
       } catch (err: any) {
-        console.error(err);
-        setError("Could not load messages. Ensure backend is running.");
+        console.error("Fetch error:", err);
+        setError("Unable to connect to the server. Please check if the backend is running.");
       } finally {
         setLoading(false);
       }
@@ -52,93 +65,117 @@ const AdminContacts = () => {
   }, []);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      return new Date(dateString).toLocaleDateString("en-IN", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      return dateString;
+    }
   };
 
   return (
-    <AdminLayout title="Contact Messages">
+    <AdminLayout title="Contact Inquiries">
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-3xl font-bold tracking-tight">Inquiries</h2>
-          <Badge variant="secondary" className="text-lg px-4 py-1">
-            Total: {messages.length}
-          </Badge>
+        {/* Top Stats Bar */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Contact Messages</h2>
+            <p className="text-slate-500">Manage and respond to user inquiries from the website.</p>
+          </div>
+          <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-xl border border-blue-100 shadow-sm">
+            <MessageSquare size={18} />
+            <span className="font-bold">Total Inquiries: {messages.length}</span>
+          </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Messages</CardTitle>
+        <Card className="shadow-xl border-slate-200 overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User size={20} className="text-blue-600" />
+              Recent Submissions
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {loading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
+              <div className="p-8 space-y-4">
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
               </div>
             ) : error ? (
-              <div className="p-4 text-red-500 bg-red-50 rounded-md border border-red-200">
-                {error}
+              <div className="m-8 p-6 text-red-600 bg-red-50 rounded-xl border border-red-200 flex items-center gap-3">
+                <div className="bg-red-100 p-2 rounded-full">⚠️</div>
+                <p className="font-medium">{error}</p>
               </div>
             ) : messages.length === 0 ? (
-              <div className="text-center text-gray-500 py-12">
-                No contact messages found.
+              <div className="text-center py-20">
+                <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Mail className="text-slate-300" size={32} />
+                </div>
+                <p className="text-slate-500 font-medium text-lg">No contact messages yet.</p>
+                <p className="text-slate-400 text-sm">When users fill out the contact form, they will appear here.</p>
               </div>
             ) : (
-              <div className="rounded-md border">
+              <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>User Details</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead className="w-[40%]">Message</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="font-bold text-slate-700">Date Received</TableHead>
+                      <TableHead className="font-bold text-slate-700">User Information</TableHead>
+                      <TableHead className="font-bold text-slate-700">Subject</TableHead>
+                      <TableHead className="font-bold text-slate-700 w-[35%]">Message Content</TableHead>
+                      <TableHead className="font-bold text-slate-700">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {messages.map((msg) => (
-                      <TableRow key={msg._id} className="hover:bg-slate-50">
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground align-top pt-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-3 h-3" />
+                      <TableRow key={msg._id} className="hover:bg-blue-50/30 transition-colors">
+                        <TableCell className="align-top pt-5">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                            <Calendar className="w-3.5 h-3.5" />
                             {formatDate(msg.submittedAt)}
                           </div>
                         </TableCell>
-                        <TableCell className="align-top pt-4">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-semibold text-gray-900">{msg.name}</span>
-                            <a href={`mailto:${msg.email}`} className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                              <Mail className="w-3 h-3" /> {msg.email}
+                        <TableCell className="align-top pt-5">
+                          <div className="flex flex-col space-y-1">
+                            <span className="font-bold text-slate-900 text-sm uppercase tracking-tight">{msg.name}</span>
+                            <a 
+                              href={`mailto:${msg.email}`} 
+                              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              <Mail className="w-3.5 h-3.5" /> {msg.email}
                             </a>
-                            <span className="flex items-center gap-1 text-xs text-gray-500">
-                              <Phone className="w-3 h-3" /> {msg.phone}
-                            </span>
+                            <a 
+                              href={`tel:${msg.phone}`} 
+                              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700"
+                            >
+                              <Phone className="w-3.5 h-3.5" /> {msg.phone}
+                            </a>
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium text-gray-700 align-top pt-4">
-                          {msg.subject}
+                        <TableCell className="align-top pt-5 font-semibold text-slate-700 italic">
+                          "{msg.subject}"
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600 align-top pt-4">
-                          <div className="max-h-24 overflow-y-auto pr-2">
+                        <TableCell className="align-top pt-5">
+                          <div className="text-sm text-slate-600 leading-relaxed bg-white/50 p-3 rounded-lg border border-slate-100 shadow-sm max-h-32 overflow-y-auto">
                             {msg.message}
                           </div>
                         </TableCell>
-                        <TableCell className="align-top pt-4">
+                        <TableCell className="align-top pt-5">
                           <Badge
-                            className={
+                            className={`px-3 py-1 rounded-full border shadow-sm font-bold uppercase text-[10px] tracking-widest ${
                               msg.status === "New"
-                                ? "bg-green-100 text-green-700 hover:bg-green-200 border-green-200"
-                                : "bg-gray-100 text-gray-700"
-                            }
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-slate-100 text-slate-600 border-slate-200"
+                            }`}
                           >
-                            {msg.status}
+                            {msg.status || "New"}
                           </Badge>
                         </TableCell>
                       </TableRow>

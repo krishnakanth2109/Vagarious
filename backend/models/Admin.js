@@ -10,7 +10,7 @@ const adminSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  // New fields for OTP functionality
+  // Fields for OTP functionality
   otp: {
     type: String,
     default: null

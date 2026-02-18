@@ -45,7 +45,7 @@ const AdminLayout = ({ children, title = "Dashboard" }: AdminLayoutProps) => {
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "Jobs", path: "/admin-jobs", icon: Briefcase },
     { name: "Candidate Applications", path: "/admin-candidates", icon: FileText }, 
-    { name: "Employer Requirement", path: "/admin-requirements", icon: Users },
+    { name: "Employee Requirement", path: "/admin-requirements", icon: Users },
     { name: "Contact Messages", path: "/admin-contacts", icon: MessageSquare }, // ADDED THIS LINE
     { name: "Settings", path: "/settings", icon: Settings },
   ];
