@@ -3,16 +3,13 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 
-// Import Chatbot Service
-import { loadKnowledge, getChatResponse } from "./chatbotService.js";
-
 // Import Routes
 import jobRoutes from "./routes/jobRoutes.js";
 import candidateRoutes from "./routes/candidateRoutes.js";
 import itRecruitmentRoutes from "./routes/itRecruitmentRoutes.js";
 import employerRequirementRoutes from "./routes/employerRequirementRoutes.js";
 import nonITRoleRoutes from "./routes/nonITRoleRoutes.js";
-import chatRoutes from "./routes/chatRoutes.js";
+import chatRoutes, { syncChatbotKnowledge } from "./routes/chatRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 
 // Load environment variables
@@ -99,19 +96,22 @@ connectDB().then(() => {
   app.listen(PORT, async () => {
     console.log(`Server running on port ${PORT}`);
 
-    // Initialize Chatbot Knowledge Base after server starts
-    // We catch potential errors here to not crash the server if loading fails
+    // Initialize Chatbot Intelligence Sync after server starts
     try {
-      await loadKnowledge();
+      await syncChatbotKnowledge();
     } catch (err) {
-      console.error("Knowledge load failed:", err);
+      console.error("Chatbot Sync failed:", err);
     }
   });
 }).catch((err) => {
-  // This catch block handles errors from connectDB itself if it were to throw (it catches internally though)
   console.error("Failed to connect to DB:", err.message);
   console.log("Starting server in Offline Mode...");
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`Server running on port ${PORT}`);
+    try {
+      await syncChatbotKnowledge();
+    } catch (err) {
+      console.error("Chatbot Sync failed in offline mode:", err);
+    }
   });
 });

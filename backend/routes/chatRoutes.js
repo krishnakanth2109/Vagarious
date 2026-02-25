@@ -4,14 +4,23 @@ import puppeteer from 'puppeteer';
 
 const router = express.Router();
 
-let SITE_CONTENT = [
+/**
+ * Knowledge Base Store
+ * Initially populated with fallback data, then updated dynamically
+ */
+let KNOWLEDGE_BASE = {
+    content: [],
+    lastSynced: null,
+    isSyncing: false
+};
+
+const FALLBACK_CONTENT = [
     {
         id: "home",
-        keywords: ["home", "vagarious", "company", "about us", "overview", "who is", "what is vagarious"],
+        keywords: ["home", "vagarious", "company", "about us", "who is", "what is vagarious"],
         content: `Vagarious Solutions is your trusted IT & Non-IT recruitment partner. 
         We specialize in connecting exceptional talent with outstanding opportunities. 
         We have over 15+ years of experience, 1500+ placements, and 200+ client companies.
-        We serve industries like IT & Software, BFSI, Healthcare, Manufacturing, Retail, and BPO.
         Our mission is to be a reliable recruitment partner, connecting talent with opportunity.`
     },
     {
@@ -31,8 +40,7 @@ let SITE_CONTENT = [
         - We provide access to premium job opportunities in both IT and Non-IT sectors.
         - Our services are completely free for candidates.
         - You can browse current openings and upload your resume on our "Candidates" page.
-        - The process involves submitting your resume, initial screening, job matching, interview prep, and getting hired.
-        - We also offer career counseling and salary negotiation guidance.`
+        - The process involves submitting your resume, initial screening, job matching, interview prep, and getting hired.`
     },
     {
         id: "employers",
@@ -45,35 +53,41 @@ let SITE_CONTENT = [
     },
     {
         id: "contact",
-        keywords: ["contact", "email", "phone", "address", "location", "reach", "support", "office", "headquarters", "bangalore", "mumbai", "delhi", "hyderabad"],
-        content: `You can reach us specifically via:
+        keywords: ["contact", "email", "phone", "address", "location", "reach", "office", "bangalore", "mumbai", "delhi", "hyderabad"],
+        content: `Contact Vagarious Solutions:
         - **Email**: contact@vagarious.com
         - **Location**: Headquartered in Hyderabad, with presence in Bangalore, Mumbai, and Delhi.
-        - **Support**: Use the contact form on our website to talk to an expert.`
+        - **Support**: Reach out via our website's contact form for expert assistance.`
     }
 ];
 
-let HAS_SCRAPED = false;
+// Initialize with fallbacks
+KNOWLEDGE_BASE.content = FALLBACK_CONTENT;
 
-async function scrapeWebsite() {
-    if (HAS_SCRAPED) return;
+/**
+ * Synchronize Chatbot Intelligence with Live Website
+ */
+export async function syncChatbotKnowledge() {
+    if (KNOWLEDGE_BASE.isSyncing) return;
+    KNOWLEDGE_BASE.isSyncing = true;
+
+    console.log("🌐 Chatbot Intelligence: Initiating knowledge sync...");
+
+    let browser;
     try {
-        console.log("🌐 Chatbot: Starting live web intelligence sync...");
-        const browser = await puppeteer.launch({
+        browser = await puppeteer.launch({
             headless: "new",
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
         });
 
-        const scrapedData = [];
-        // Try local first, then production/remote
-        const PRIMARY_URL = 'http://localhost:8080';
-        const FALLBACK_URL = 'https://vagarioussolutions.com'; // Use your real domain here
-
         const routes = ['/', '/about', '/services', '/ITRecruitment', '/employers', '/candidates', '/contact'];
+        const PRIMARY_URL = 'http://localhost:8080';
+        const FALLBACK_URL = 'https://vagarioussolutions.com';
 
-        for (const route of routes) {
+        const scrapeResults = await Promise.all(routes.map(async (route) => {
+            let page;
             try {
-                const page = await browser.newPage();
+                page = await browser.newPage();
                 await page.setRequestInterception(true);
                 page.on('request', (req) => {
                     if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) req.abort();
@@ -82,53 +96,54 @@ async function scrapeWebsite() {
 
                 let loaded = false;
                 try {
-                    await page.goto(`${PRIMARY_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 8000 });
+                    await page.goto(`${PRIMARY_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 5000 });
                     loaded = true;
                 } catch (e) {
-                    console.log(`⚠️ Localhost unavailable for ${route}, trying remote...`);
                     try {
-                        await page.goto(`${FALLBACK_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+                        await page.goto(`${FALLBACK_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 10000 });
                         loaded = true;
-                    } catch (e2) {
-                        console.log(`❌ Failed to load ${route} from all sources.`);
-                    }
+                    } catch (e2) { /* Fail silently to proceed with others */ }
                 }
 
                 if (loaded) {
                     const content = await page.evaluate(() => {
-                        document.querySelectorAll('script, style, nav, footer, img, noscript').forEach(el => el.remove());
-                        return document.body ? document.body.innerText.replace(/\\s+/g, ' ').trim() : '';
+                        document.querySelectorAll('script, style, nav, footer, img, noscript, header, iframe').forEach(el => el.remove());
+                        return document.body ? document.body.innerText.replace(/\s+/g, ' ').trim() : '';
                     });
 
                     if (content.length > 100) {
-                        scrapedData.push({
-                            id: route === '/' ? 'home' : route.substring(1),
-                            keywords: [route === '/' ? 'home' : route.substring(1), 'vagarious'],
-                            content: content.substring(0, 2500)
-                        });
+                        return {
+                            id: route === '/' ? 'home' : route.substring(1).toLowerCase(),
+                            keywords: [route === '/' ? 'home' : route.substring(1).toLowerCase(), 'vagarious'],
+                            content: content.substring(0, 3000)
+                        };
                     }
                 }
-                await page.close();
             } catch (err) {
-                console.log(`❌ Scrape error on ${route}: ${err.message}`);
+                console.warn(`⚠️ Chatbot Sync: Route ${route} skipped - ${err.message}`);
+            } finally {
+                if (page) await page.close();
             }
-        }
+            return null;
+        }));
 
-        await browser.close();
-
-        if (scrapedData.length > 0) {
-            SITE_CONTENT = scrapedData;
-            HAS_SCRAPED = true;
-            console.log("✨ Chatbot knowledge synced successfully from live site!");
+        const freshData = scrapeResults.filter(Boolean);
+        if (freshData.length > 0) {
+            KNOWLEDGE_BASE.content = freshData;
+            KNOWLEDGE_BASE.lastSynced = new Date();
+            console.log(`✨ Chatbot Intelligence: Successfully synced ${freshData.length} pages.`);
+        } else {
+            console.log("ℹ️ Chatbot Intelligence: No new data found, maintaining current knowledge.");
         }
     } catch (error) {
-        console.error("⛔ Scraper Critical Failure:", error.message);
+        console.error("⛔ Chatbot Intelligence: Critical sync failure:", error.message);
+    } finally {
+        if (browser) await browser.close();
+        KNOWLEDGE_BASE.isSyncing = false;
     }
 }
 
-// Start scraper
-scrapeWebsite();
-
+// Chat API Route
 router.post('/', async (req, res) => {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: "Message is required" });
@@ -137,7 +152,6 @@ router.post('/', async (req, res) => {
 
     try {
         if (process.env.GROQ_API_KEY) {
-            console.log("🤖 Querying Groq AI...");
             const groqResponse = await nodeFetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -150,9 +164,9 @@ router.post('/', async (req, res) => {
                         {
                             role: 'system',
                             content: `You are Vagarious Assistant, a professional AI for Vagarious Solutions. 
-                            Answer based ONLY on this context: ${JSON.stringify(SITE_CONTENT)}.
-                            If the answer isn't there, say you can only help with Vagarious-related queries.
-                            Be concise, use emojis, and bold key terms.`
+                            Use this company context ONLY: ${JSON.stringify(KNOWLEDGE_BASE.content)}.
+                            If the answer isn't in the context, politely state you only assist with Vagarious-related information.
+                            Style: Professional, concise, use emojis, bold terms.`
                         },
                         { role: 'user', content: message }
                     ],
@@ -165,17 +179,17 @@ router.post('/', async (req, res) => {
                 return res.json({ response: data.choices[0].message.content });
             }
         }
-        throw new Error("AI Fallback required");
+        throw new Error("AI provider unavailable");
     } catch (error) {
-        console.error("⚠️ AI Mode Failed, switching to Knowledge Search:", error.message);
+        console.log("ℹ️ Chatbot: Using local knowledge search...");
 
         let bestMatch = null;
         let maxScore = 0;
 
-        SITE_CONTENT.forEach(section => {
+        KNOWLEDGE_BASE.content.forEach(section => {
             let score = 0;
             section.keywords.forEach(kw => {
-                if (userMessage.includes(kw.toLowerCase())) score += kw.length;
+                if (userMessage.includes(kw)) score += kw.length;
             });
             if (score > maxScore) {
                 maxScore = score;
@@ -183,7 +197,7 @@ router.post('/', async (req, res) => {
             }
         });
 
-        const response = bestMatch || "Hello! How can I help you find information about Vagarious Solutions today?";
+        const response = bestMatch || "Hello! I'm Vagarious Assistant. How can I help you today?";
         return res.json({ response });
     }
 });
