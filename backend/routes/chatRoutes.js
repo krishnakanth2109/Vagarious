@@ -1,10 +1,10 @@
-
 import express from 'express';
+import nodeFetch from 'node-fetch';
+import puppeteer from 'puppeteer';
 
 const router = express.Router();
 
-// --- SITE CONTENT INDEX (Simulating "Reading the Site") ---
-const SITE_CONTENT = [
+let SITE_CONTENT = [
     {
         id: "home",
         keywords: ["home", "vagarious", "company", "about us", "overview", "who is", "what is vagarious"],
@@ -50,159 +50,141 @@ const SITE_CONTENT = [
         - **Email**: contact@vagarious.com
         - **Location**: Headquartered in Hyderabad, with presence in Bangalore, Mumbai, and Delhi.
         - **Support**: Use the contact form on our website to talk to an expert.`
-    },
-    {
-        id: "process",
-        keywords: ["process", "how it works", "steps", "methodology", "recruitment process", "hiring process", "recuriment"],
-        content: `Our Recruitment Process:
-        1. Requirement Analysis
-        2. Talent Sourcing
-        3. Screening & Assessment
-        4. Shortlist Presentation
-        5. Interview Coordination
-        6. Offer & Onboarding`
-    },
-    {
-        id: "reviews",
-        keywords: ["review", "testimonial", "feedback", "rating", "satisfaction", "client say"],
-        content: `Our clients love us! We have a 98% Client Satisfaction rate.
-        "Vagarious Solutions transformed our hiring process... exceptional tech requirements understanding." - CTO, Tech Solutions Inc.
-        "Remarkable consistency in delivering quality candidates." - HR Director, Global Services Ltd.`
-    },
-    {
-        id: "social",
-        keywords: ["social media", "linkedIn", "facebook", "twitter", "instagram", "follow"],
-        content: `Stay connected with us! You can follow Vagarious Solutions on LinkedIn for the latest industry updates, job openings, and company news.`
-    },
-    {
-        id: "system",
-        keywords: ["are you ai", "real ai", "how do you work", "artificial intelligence", "bot work", "who created you", "model"],
-        content: `I am V-Bot, a virtual assistant powered by advanced AI (Llama 3 via Groq). 
-        I am here to help you with everything related to Vagarious Solutions. 
-        I can answer your questions, help you find jobs, and provide information about our recruitment services.`
     }
 ];
 
-const GENERAL_FALLBACK = "I apologize, but I couldn't find specific information about that on our website. I can help you with our Services, Job Openings for Candidates, or Hiring for Employers. What would you like to know?";
+let HAS_SCRAPED = false;
+
+async function scrapeWebsite() {
+    if (HAS_SCRAPED) return;
+    try {
+        console.log("🌐 Chatbot: Starting live web intelligence sync...");
+        const browser = await puppeteer.launch({
+            headless: "new",
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        });
+
+        const scrapedData = [];
+        // Try local first, then production/remote
+        const PRIMARY_URL = 'http://localhost:8080';
+        const FALLBACK_URL = 'https://vagarioussolutions.com'; // Use your real domain here
+
+        const routes = ['/', '/about', '/services', '/ITRecruitment', '/employers', '/candidates', '/contact'];
+
+        for (const route of routes) {
+            try {
+                const page = await browser.newPage();
+                await page.setRequestInterception(true);
+                page.on('request', (req) => {
+                    if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) req.abort();
+                    else req.continue();
+                });
+
+                let loaded = false;
+                try {
+                    await page.goto(`${PRIMARY_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 8000 });
+                    loaded = true;
+                } catch (e) {
+                    console.log(`⚠️ Localhost unavailable for ${route}, trying remote...`);
+                    try {
+                        await page.goto(`${FALLBACK_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+                        loaded = true;
+                    } catch (e2) {
+                        console.log(`❌ Failed to load ${route} from all sources.`);
+                    }
+                }
+
+                if (loaded) {
+                    const content = await page.evaluate(() => {
+                        document.querySelectorAll('script, style, nav, footer, img, noscript').forEach(el => el.remove());
+                        return document.body ? document.body.innerText.replace(/\\s+/g, ' ').trim() : '';
+                    });
+
+                    if (content.length > 100) {
+                        scrapedData.push({
+                            id: route === '/' ? 'home' : route.substring(1),
+                            keywords: [route === '/' ? 'home' : route.substring(1), 'vagarious'],
+                            content: content.substring(0, 2500)
+                        });
+                    }
+                }
+                await page.close();
+            } catch (err) {
+                console.log(`❌ Scrape error on ${route}: ${err.message}`);
+            }
+        }
+
+        await browser.close();
+
+        if (scrapedData.length > 0) {
+            SITE_CONTENT = scrapedData;
+            HAS_SCRAPED = true;
+            console.log("✨ Chatbot knowledge synced successfully from live site!");
+        }
+    } catch (error) {
+        console.error("⛔ Scraper Critical Failure:", error.message);
+    }
+}
+
+// Start scraper
+scrapeWebsite();
 
 router.post('/', async (req, res) => {
     const { message } = req.body;
-
-    if (!message) {
-        return res.status(400).json({ error: "Message is required" });
-    }
+    if (!message) return res.status(400).json({ error: "Message is required" });
 
     const userMessage = message.toLowerCase();
 
     try {
-        // 1. Try Groq API (Cloud AI - Recommended for Render)
         if (process.env.GROQ_API_KEY) {
-            const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            console.log("🤖 Querying Groq AI...");
+            const groqResponse = await nodeFetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.3-70b-versatile', // Updated model (Llama 3.3)
+                    model: 'llama-3.3-70b-versatile',
                     messages: [
                         {
                             role: 'system',
-                            content: `You are V-Bot, a professional AI assistant for "Vagarious Solutions". 
-                          Use the following context about the company to answer the user's question briefly and professionally.
-                          
-                          CONTEXT: ${JSON.stringify(SITE_CONTENT)}
-                          
-                          Key Rules:
-                          1. Only answer based on the provided context.
-                          2. Format your response in a **structured, clean way**.
-                          3. Use **Recallable Bullet Points**, **Bold Text** for key terms, and short paragraphs.
-                          4. **Use Emojis** liberally to make the conversation friendly and engaging. 
-                             - Use 🚀 for growth/action
-                             - Use 💼 for jobs/work
-                             - Use 🤝 for partnership
-                             - Use 💻 for tech/IT
-                             - Use ✨ for highlights
-                          5. Avoid long blocks of text. Make it look organized.
-                          6. If you don't know the answer from the context, refuse politely.`
+                            content: `You are Vagarious Assistant, a professional AI for Vagarious Solutions. 
+                            Answer based ONLY on this context: ${JSON.stringify(SITE_CONTENT)}.
+                            If the answer isn't there, say you can only help with Vagarious-related queries.
+                            Be concise, use emojis, and bold key terms.`
                         },
                         { role: 'user', content: message }
                     ],
-                    temperature: 0.7,
-                    max_tokens: 500
+                    temperature: 0.6
                 }),
             });
 
             if (groqResponse.ok) {
                 const data = await groqResponse.json();
                 return res.json({ response: data.choices[0].message.content });
-            } else {
-                console.error("Groq API Error:", await groqResponse.text());
-                throw new Error("Groq API Failed");
             }
         }
-
-        // If no API key, force fallback
-        throw new Error("No API Key - Using Site Search Mode");
-
+        throw new Error("AI Fallback required");
     } catch (error) {
-        console.error("Chat Route Error:", error.message);
-        if (process.env.GROQ_API_KEY) console.log("Groq Key detected (ending in ...%s)", process.env.GROQ_API_KEY.slice(-4));
-        else console.log("No Groq Key detected");
+        console.error("⚠️ AI Mode Failed, switching to Knowledge Search:", error.message);
 
-        // 2. "Analyze and Search Site" Logic
-
-        let bestMatchContent = null;
+        let bestMatch = null;
         let maxScore = 0;
-
-        // Simple Scoring Algorithm
-        // Score = Number of matching keywords found in the user message
 
         SITE_CONTENT.forEach(section => {
             let score = 0;
-            section.keywords.forEach(keyword => {
-                const keywordLower = keyword.toLowerCase();
-                // Check if the user message contains the keyword
-                if (userMessage.includes(keywordLower)) {
-                    // Boost score for exact or longer phrases (length > 4) to prefer "recruitment process" over just "process"
-                    score += keywordLower.length > 4 ? 2 : 1;
-
-                    // Extra boost if the keyword appears as a standalone word (regex check could be added here for precision)
-                }
+            section.keywords.forEach(kw => {
+                if (userMessage.includes(kw.toLowerCase())) score += kw.length;
             });
-
-            // Boost score for strong intent words relative to the section
-            if (section.id === 'contact' && (userMessage.includes('contact') || userMessage.includes('email') || userMessage.includes('address'))) score += 3;
-            if (section.id === 'services' && userMessage.includes('services')) score += 3;
-            if (section.id === 'candidates' && (userMessage.includes('job') || userMessage.includes('vacancy') || userMessage.includes('opening'))) score += 3;
-            if (section.id === 'process' && (userMessage.includes('process') || userMessage.includes('steps'))) score += 5; // Heavy weight for process
-            if (section.id === 'reviews' && (userMessage.includes('review') || userMessage.includes('feedback'))) score += 4;
-            if (section.id === 'social' && (userMessage.includes('social') || userMessage.includes('media'))) score += 4;
-
             if (score > maxScore) {
                 maxScore = score;
-                bestMatchContent = section.content;
+                bestMatch = section.content;
             }
         });
 
-        // Threshold: If score is 0, we found nothing relevant.
-        // If score > 0, return the content.
-
-        let response = GENERAL_FALLBACK;
-
-        if (maxScore > 0 && bestMatchContent) {
-            response = bestMatchContent;
-        } else {
-            // Basic "Who are you" check if no content matched
-            if (userMessage.includes("who are you") || userMessage.includes("bot")) {
-                response = "I am V-Bot, your virtual assistant. I've analyzed the Vagarious Solutions website and can answer questions about our Services, Candidates, and Employers.";
-            } else if (userMessage.includes("hello") || userMessage.includes("hi ")) {
-                response = "Hello! How can I help you find information on the Vagarious website today?";
-            }
-        }
-
-        // Formatting the response nicely
-        return res.json({ response: response });
+        const response = bestMatch || "Hello! How can I help you find information about Vagarious Solutions today?";
+        return res.json({ response });
     }
 });
 

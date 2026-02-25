@@ -382,6 +382,65 @@
     background-size: 200% 200%;
     animation: gradient-flow 3s ease infinite;
   }
+
+  @keyframes wave {
+
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+
+    20% {
+      transform: rotate(15deg);
+    }
+
+    40% {
+      transform: rotate(-10deg);
+    }
+
+    60% {
+      transform: rotate(10deg);
+    }
+
+    80% {
+      transform: rotate(-5deg);
+    }
+  }
+
+  .animate-wave {
+    animation: wave 2.5s infinite;
+    transform-origin: bottom right;
+  }
+
+  @keyframes float-slow {
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .animate-float-slow {
+    animation: float-slow 4s ease-in-out infinite;
+  }
+
+  /* Smooth transitions */
+  * {
+    @apply transition-colors duration-200;
+  }
+
+  /* Container customization */
+  .container-custom {
+    @apply mx-auto max-w-7xl;
+  }
+
+  .section-padding {
+    @apply py-16 md:py-24;
+  }
 }
 
 /* Apple-like focus styles */
@@ -392,18 +451,4 @@
 
 *:focus:not(:focus-visible) {
   outline: none;
-}
-
-/* Smooth transitions */
-* {
-  @apply transition-colors duration-200;
-}
-
-/* Container customization */
-.container-custom {
-  @apply mx-auto max-w-7xl;
-}
-
-.section-padding {
-  @apply py-16 md:py-24;
 }
