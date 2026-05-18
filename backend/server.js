@@ -29,7 +29,8 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://hrms-vaz.netlify.app",
   "https://hrms-420.netlify.app",
-  "http://192.168.137.1:8080"
+  "http://192.168.137.1:8080",
+  "https://vagarioussolutions.com"
 ];
 
 const corsOptions = {
